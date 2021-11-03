@@ -1,0 +1,27 @@
+# Path to the local samples
+
+version: 0
+
+samples: '/eos/project/d/dshep/L1anomaly/'
+
+path: '/eos/cms/store/cmst3/group/l1tr/jngadiub/'
+eos_root_samples: 'L1TNtupleRun3/QCD_Pt-15to7000_TuneCP5_Flat_14TeV_pythia8/mcRun3_Run3Winter20DRMiniAOD-FlatPU0to80_110X_v6-v1/210315_192437/0000/'
+eos_root_samples_1: 'L1TNtupleRun3/QCD_Pt-15to7000_TuneCP5_Flat_14TeV_pythia8/mcRun3_Run3Winter20DRMiniAOD-FlatPU0to80_110X_v6-v1-ext1/210315_192550/0000/'
+VectorZPrimeToQQ__M50: 'L1TNtupleRun3/VectorZPrimeToQQ_M50_pT300_TuneCP5_14TeV_madgraph_pythia8/mcRun3_Run3Winter20DRPremixMiniAOD-110X_v6-v1/210315_191053/0000/'
+VectorZPrimeToQQ__M100: 'L1TNtupleRun3/VectorZPrimeToQQ_M100_pT300_TuneCP5_14TeV_madgraph_pythia8/mcRun3_Run3Winter20DRPremixMiniAOD-110X_v6-v1/210315_190824/0000/'
+VectorZPrimeToQQ__M200: 'L1TNtupleRun3/VectorZPrimeToQQ_M200_pT300_TuneCP5_14TeV_madgraph_pythia8/mcRun3_Run3Winter20DRPremixMiniAOD-110X_v6-v1/210315_190938/0000/'
+VBF_HToInvisible_M125: 'L1TNtupleRun3/VBF_HToInvisible_M125_TuneCUETP8M1_14TeV_powheg_pythia8/mcRun3_Run3Winter20DRPremixMiniAOD-110X_v6-v1/210315_190556/0000/'
+VBF_HToInvisible_M125_private: 'L1TNtupleRun3-privateMC/CRAB_UserFiles/mcRun3_Run3Winter20DRPremixMiniAOD-110X_v6-v1/210510_085753/0000/'
+ZprimeToZH_MZprime1000: 'L1TNtupleRun3/ZprimeToZH_MZprime1000_MZ50_MH80_ZTouds_HTouds_narrow_TuneCP5_14TeV_madgraph_pythia8/mcRun3_Run3Winter20DRPremixMiniAOD-110X_v6-v2/210315_191208/0000/'
+ZprimeToZH_MZprime800: 'L1TNtupleRun3/ZprimeToZH_MZprime800_MZ50_MH80_ZTouds_HTouds_narrow_TuneCP5_14TeV_madgraph_pythia8/mcRun3_Run3Winter20DRPremixMiniAOD-110X_v6-v2/210315_191437/0000/'
+ZprimeToZH_MZprime600: 'L1TNtupleRun3/ZprimeToZH_MZprime600_MZ50_MH80_ZTouds_HTouds_narrow_TuneCP5_14TeV_madgraph_pythia8/mcRun3_Run3Winter20DRPremixMiniAOD-110X_v6-v2/210315_191323/0000/'
+GluGluToHHTo4B: 'L1TNtupleRun3/GluGluToHHTo4B_node_SM_TuneCP5_14TeV-madgraph-pythia8/mcRun3_Run3Winter20DRPremixMiniAOD-110X_v6-v2/210315_191723/0000/'
+HTo2LongLivedTo4mu_1000: 'L1TNtupleRun3/HTo2LongLivedTo4mu_MH-1000_MFF-450_CTau-10000mm_TuneCP5_14TeV_pythia8/mcRun3_Run3Winter20DRPremixMiniAOD-110X_v6-v2/210315_192223/0000/'
+HTo2LongLivedTo4mu_125_12: 'L1TNtupleRun3/HTo2LongLivedTo4mu_MH-125_MFF-12_CTau-900mm_TuneCP5_14TeV_pythia8/mcRun3_Run3Winter20DRPremixMiniAOD-110X_v6-v2/210315_191841/0000/'
+HTo2LongLivedTo4mu_125_25: 'L1TNtupleRun3/HTo2LongLivedTo4mu_MH-125_MFF-25_CTau-1500mm_TuneCP5_14TeV_pythia8/mcRun3_Run3Winter20DRPremixMiniAOD-110X_v6-v2/210315_191956/0000/'
+HTo2LongLivedTo4mu_125_50: 'L1TNtupleRun3/HTo2LongLivedTo4mu_MH-125_MFF-50_CTau-3000mm_TuneCP5_14TeV_pythia8/mcRun3_Run3Winter20DRPremixMiniAOD-110X_v6-v2/210315_192110/0000/'
+VBFHToTauTau: 'L1TNtupleRun3/VBFHToTauTau_M125_TuneCUETP8M1_14TeV_powheg_pythia8/mcRun3_Run3Winter20DRPremixMiniAOD-110X_v6-v1/210315_191556/0000/'
+VBF_HH: 'L1TNtupleRun3/VBF_HH_CV_1_C2V_1_C3_1_TuneCP5_PSweights_14TeV-madgraph-pythia8/mcRun3_Run3Winter20DRPremixMiniAOD-110X_v6-v2/210315_190710/0000/'
+
+
+BETA: 0.8
