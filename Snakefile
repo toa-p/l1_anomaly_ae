@@ -12,16 +12,16 @@ rule copy_root_from_eos:
             echo "cp {input}L1Ntuple_$i.root {output}L1Ntuple_$i.root" \n\
             cp {input}L1Ntuple_$i.root {output}L1Ntuple_$i.root || : \n\
         done'
-
+ 
 rule convert:
     ''' Convert given root tuple to h5 format '''
     input:
         script = 'convert_to_h5.py',
-        input_file = config['path'] + config['eos_root_samples_1'] +'L1Ntuple_{id}.root'
+        input_file = config['path'] + config['eos_root_samples_1'] +'L1Ntuple_1.root'
     output:
-        output_file = 'output/h5_samples/QCD_1/L1Ntuple_{id}.h5'
+        output_file = config['path'] + '/test/L1Ntuple_1.h5'
     shell:
-        'cd /afs/cern.ch/work/e/egovorko/CMSSW_11_0_2/src; eval `scramv1 runtime -sh`; cd -;'
+        'cd /uscms/home/ngadiuba/CMSSW_11_2_0/src; eval `scramv1 runtime -sh`; cd -;'
         'python {input.script} --input-file {input.input_file} \
                                --output-file {output}'
 
