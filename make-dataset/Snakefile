@@ -4,7 +4,7 @@ rule copy_root_from_eos:
     ''' Copy root tuples from eos to local dir before accessing them
         due to regular issues accessing eos files directly '''
     input:
-        config['path'] + config['eos_root_samples_1']
+        config['path'] + config['eos_root_samples']
     output:
         directory('output/root_samples/')
     shell:
@@ -17,13 +17,14 @@ rule convert:
     ''' Convert given root tuple to h5 format '''
     input:
         script = 'convert_to_h5.py',
-        input_file = config['path'] + config['eos_root_samples_1'] +'L1Ntuple_1.root'
+        input_file = config['path'] + config['eos_root_samples'] +'L1Ntuple_{id}.root'
     output:
-        output_file = config['path'] + '/test/L1Ntuple_1.h5'
+        output_file = config['output_h5'] + '/QCD/L1Ntuple_{id}.h5'
     shell:
-        'cd /uscms/home/ngadiuba/CMSSW_11_2_0/src; eval `scramv1 runtime -sh`; cd -;'
+        'cd ' + config['cmssw_dir'] + '; eval `scramv1 runtime -sh`; cd -;'
         'python {input.script} --input-file {input.input_file} \
                                --output-file {output}'
+
 
 IDS = [i for i in range(1,334) if i!=249] # list(range(1,334))
 rule convert_all:
@@ -37,7 +38,7 @@ rule merge_h5_tuples:
         script = 'merge_h5_tuples.py',
         input_files = expand(rules.convert.output, id=IDS)
     output:
-        file = 'output/L1Ntuple_QCD_1.h5'
+        file = config['output_h5'] + '/L1Ntuple_QCD_1.h5'
     shell:
         'python {input.script} --input-files {input.input_files} \
                                --output-file {output.file}'
@@ -48,7 +49,7 @@ rule preprocess:
         script = 'preprocess.py',
         file = rules.merge_h5_tuples.output.file
     output:
-        h5 = 'output/QCD_preprocessed.h5'
+        h5 = config['output_h5'] + '/QCD_preprocessed.h5'
     shell:
         'python {input.script} --input-file {input.file} \
                                --output-file {output.h5}'
@@ -59,11 +60,11 @@ rule convert_bsm:
         script = 'convert_to_h5.py',
         input_file = lambda wildcards: config['path'] + config[wildcards.bsm_type] + 'L1Ntuple_{id}.root'
     output:
-        output_file = 'output/h5_samples/{bsm_type}/L1Ntuple_{id}.h5'
+        output_file = config['output_h5'] + '/{bsm_type}/L1Ntuple_{id}.h5'
     params:
         tree_name = 'l1UpgradeTree/L1UpgradeTree'
     shell:
-        'cd /afs/cern.ch/work/e/egovorko/CMSSW_11_0_2/src; eval `scramv1 runtime -sh`; cd -;'
+        'cd ' + config['cmssw_dir'] + '; eval `scramv1 runtime -sh`; cd -;'
         'python {input.script} --input-file {input.input_file} \
                                --output-file {output} \
                                --tree-name {params.tree_name}'
@@ -94,7 +95,7 @@ rule merge_h5_bsm_type:
           id=IDS_BSM[wildcards.bsm_type],
           bsm_type=wildcards.bsm_type)
     output:
-        file = 'output/L1Ntuple_{bsm_type}.h5'
+        file = config['output_h5']+'/L1Ntuple_{bsm_type}.h5'
     shell:
         'python {input.script} --input-files {input.input_files} \
                                --output-file {output.file}'
@@ -106,7 +107,7 @@ rule preprocess_bsm:
         file = lambda wildcards: expand(rules.merge_h5_bsm_type.output,
             bsm_type=wildcards.bsm_type)
     output:
-        'output/BSM_preprocessed_{bsm_type}.h5'
+        config['output_h5']+'/BSM_preprocessed_{bsm_type}.h5'
     shell:
         'python {input.script} --input-file {input.file} \
                                --output-file {output}'
@@ -118,7 +119,7 @@ rule merge_all_bsm_types:
         input_files = expand(rules.preprocess_bsm.output,
             bsm_type=IDS_BSM.keys())
     output:
-        file = 'output/BSM_preprocessed.h5'
+        file = config['output_h5']+'/BSM_preprocessed.h5'
     shell:
         'python {input.script} --input-files {input.input_files} \
                                --output-file {output.file} \

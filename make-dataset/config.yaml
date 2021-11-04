@@ -3,11 +3,10 @@
 version: 0
 
 samples: '/eos/project/d/dshep/L1anomaly/'
-
 cmssw_dir: '/uscms/home/ngadiuba/CMSSW_11_2_0/src'
 path: '/eos/uscms/store/group/lpctrig/jngadiub/'
+output_h5: '/eos/uscms/store/group/lpctrig/jngadiub/L1TNtupleRun3-h5'
 eos_root_samples: 'L1TNtupleRun3/QCD_Pt-15to7000_TuneCP5_Flat_14TeV_pythia8/mcRun3_Run3Winter20DRMiniAOD-FlatPU0to80_110X_v6-v1/210315_192437/0000/'
-eos_root_samples_1: 'test/'
 VectorZPrimeToQQ__M50: 'L1TNtupleRun3/VectorZPrimeToQQ_M50_pT300_TuneCP5_14TeV_madgraph_pythia8/mcRun3_Run3Winter20DRPremixMiniAOD-110X_v6-v1/210315_191053/0000/'
 VectorZPrimeToQQ__M100: 'L1TNtupleRun3/VectorZPrimeToQQ_M100_pT300_TuneCP5_14TeV_madgraph_pythia8/mcRun3_Run3Winter20DRPremixMiniAOD-110X_v6-v1/210315_190824/0000/'
 VectorZPrimeToQQ__M200: 'L1TNtupleRun3/VectorZPrimeToQQ_M200_pT300_TuneCP5_14TeV_madgraph_pythia8/mcRun3_Run3Winter20DRPremixMiniAOD-110X_v6-v1/210315_190938/0000/'

@@ -62,7 +62,42 @@ cd ../../make-dataset/
 python convert_to_h5.py --input-file L1Ntuple.root --output-file L1Ntuple.h5
 ```
 
-To parallelize over multiple files we use snakemake. 
+Preprocess the output file to obtain a new h5 file where the separate MET, electrons, muons, jets, met arrays are concatenated in that order:
 
+```
+python preprocess.py --input-file L1Ntuple.h5 --output-file L1Ntuple_preprocessed.h5
+```
 
+### Automatic workflow with snakemake:
 
+The workflow above is automatized for multiple files and samples using snakemake. The set of rules to be run is defined in the ```Snakefile``` file.
+
+First, edit the directories in the ```config.yaml``` file as needed (eg, output/input/cmssw folders or list/location of samples). If list of samples is changed, the ```IDS_BSM``` in the
+```Snakefile``` should also be changed accordingly. 
+
+Then execute this command (suggested in a screen session):
+
+```
+snakemake merge_all_bsm_types --cores 8
+``` 
+
+This will run in sequence the following steps:
+
+1. for each BSM sample each ROOT file will be converted to h5 with ```convert_bsm```
+2. for each BSM sample all converted h5 will be merged in one with ```merge_h5_bsm_type```
+3. for each merged BSM h5 file will be preprocessed with ```preprocess_bsm```
+4. all merged BSM h5 files will be merged in one h5 file, for each BSM type there is a separate dataset with the corresponding name (```merge_all_bsm_types```)
+
+(n,b: the BSM types are hardcoded in the ```merge_h5_tuples.py``` script)
+
+Similarly for the QCD background:
+
+```
+snakemake convert_all --cores 8
+```
+
+This will run in sequence the following steps:
+
+1. convert to h5 each ROOT file of the QCD background sample with ```convert_all```
+2. merge the h5 files into one with ```merge_h5_tuples```
+3. run preprocessing step on final merged h5 file
