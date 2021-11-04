@@ -100,4 +100,4 @@ This will run in sequence the following steps:
 
 1. convert to h5 each ROOT file of the QCD background sample with ```convert_all```
 2. merge the h5 files into one with ```merge_h5_tuples```
-3. run preprocessing step on final merged h5 file
+3. run preprocessing step on final merged h5 file with ```preprocess```
