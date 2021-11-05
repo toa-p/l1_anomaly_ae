@@ -29,6 +29,7 @@ Install some missing packages:
 
 ```
 pip install h5py
+pip install uproot
 ```
 
 Activate the environment (nb, every time you login):
