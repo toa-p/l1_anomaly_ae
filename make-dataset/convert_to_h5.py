@@ -5,8 +5,34 @@ import argparse
 import ROOT
 import numpy as np
 import h5py
+import re
 
-def convert_to_h5(input_file, output_file, tree_name):
+def getBits(infile, uGTTreePath):
+    fl1uGT = infile.Get(uGTTreePath)
+    aliases = fl1uGT.GetListOfAliases()
+    AlgoMap = {}
+    for alias in aliases:
+        matchbit = re.match(r"L1uGT\.m_algoDecisionInitial\[([0-9]+)\]", alias.GetTitle())
+        AlgoMap[alias.GetName()] = int(matchbit.group(1))
+        #print(alias.GetName(), alias.GetTitle(), matchbit.group(1))
+    return AlgoMap
+
+def filterAlgoMap(algoMap):
+    wanted_keys = []
+    prescale_file_name = "Prescale_2022_v0_1_1.csv"
+    with open(prescale_file_name) as prescale_file:
+        for line in prescale_file:
+            values = line.split(',')
+            #values[4] corresponds to "2E+34"
+            if values[4] == "1":
+                wanted_keys.append(values[1])
+    filteredAlgoMap = {}
+    for seedname, bit in algoMap.iteritems():
+        if seedname in wanted_keys:
+            filteredAlgoMap[seedname] = bit
+    return filteredAlgoMap
+
+def convert_to_h5(input_file, output_file, tree_name, uGT_tree_name):
 
     cylNames = ['pT', 'eta', 'phi']
     cartNames = ['px', 'py', 'pz']
@@ -19,12 +45,25 @@ def convert_to_h5(input_file, output_file, tree_name):
     l1sum_cyl = np.array([])
     l1sum_cart = np.array([])
 
-    inFile = ROOT.TFile(input_file, 'r')
+    inFile = ROOT.TFile.Open(input_file, 'r')
     l1Tree = inFile.Get(tree_name)
+    uGTTree = inFile.Get(uGT_tree_name)
+
+    seeds = {}
+    algo_map = filterAlgoMap(getBits(inFile, uGT_tree_name))
+    for seedname, bit in algo_map.iteritems():
+        seeds[seedname] = np.empty([l1Tree.GetEntries()])
+    seeds["L1bit"] = np.empty([l1Tree.GetEntries()])
 
     for i in range(l1Tree.GetEntries()):
         l1Tree.GetEntry(i)
+        uGTTree.GetEntry(i)
         evt = l1Tree.L1Upgrade
+        uGTevt = uGTTree.L1uGT
+
+        for seedname, bit in algo_map.iteritems():
+            seeds[seedname][i] = uGTevt.getAlgoDecisionFinal(bit)
+            seeds["L1bit"][i] = (seeds["L1bit"][i] or seeds[seedname][i]).astype(int)
 
         # sums: store the following
         # kTotalEt, kTotalEtEm, kTotalHt, kMissingEt, kMissingHt,
@@ -142,6 +181,8 @@ def convert_to_h5(input_file, output_file, tree_name):
         else:
             l1ele_cart = np.concatenate([l1ele_cart, my_l1ele_cart], axis=0)
 
+    inFile.Close()
+
     outFile = h5py.File(output_file, 'w')
     outFile.create_dataset('FeatureNames_cyl', data=cylNames, compression='gzip')
     outFile.create_dataset('FeatureNames_cart', data=cartNames, compression='gzip')
@@ -153,6 +194,8 @@ def convert_to_h5(input_file, output_file, tree_name):
     outFile.create_dataset('l1Ele_cart', data=l1ele_cart, compression='gzip')
     outFile.create_dataset('l1Sum_cyl', data = l1sum_cyl, compression='gzip')
     outFile.create_dataset('l1Sum_cart', data = l1sum_cart, compression='gzip')
+    for seed, values in seeds.iteritems():
+        outFile.create_dataset(seed, data = values, compression='gzip')
     outFile.close()
 
 if __name__ == '__main__':
@@ -160,5 +203,6 @@ if __name__ == '__main__':
     parser.add_argument('--input-file', type=str, required=True)
     parser.add_argument('--output-file', type=str, required=True)
     parser.add_argument('--tree-name', type=str, default='l1UpgradeEmuTree/L1UpgradeTree')
+    parser.add_argument('--uGT-tree-name', type=str, default='l1uGTEmuTree/L1uGTTree')
     args = parser.parse_args()
     convert_to_h5(**vars(args))
