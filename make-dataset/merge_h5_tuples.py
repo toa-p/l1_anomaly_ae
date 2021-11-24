@@ -7,7 +7,9 @@ import argparse
 
 def merge_h5_tuples(output_file, input_files, bsm):
 
-        keys = ['l1Ele_cart', 'l1Ele_cyl', 'l1Jet_cart', 'l1Jet_cyl', 'l1Muon_cart', 'l1Muon_cyl', 'l1Sum_cyl', 'l1Sum_cart']
+        #keys = ['l1Ele_cart', 'l1Ele_cyl', 'l1Jet_cart', 'l1Jet_cyl', 'l1Muon_cart', 'l1Muon_cyl', 'l1Sum_cyl', 'l1Sum_cart',
+        #        'l1Ele_Iso', 'l1Muon_Iso', 'l1Muon_Dxy', 'L1bit']
+        keys = h5py.File(input_file[0]).keys()
         data = {feature: np.array for feature in keys}
 
         input_files = [os.path.join(input_files[0], f) for f in os.listdir(input_files[0]) if os.path.isfile(os.path.join(input_files[0], f))] \
@@ -43,6 +45,13 @@ def merge_h5_tuples_bsm(output_file, input_files, bsm):
         for bsm_type in bsm_types:
             input_file = [f for f in input_files if bsm_type in f][0]
             h5f.create_dataset(bsm_type, data=h5py.File(input_file, 'r').get('full_data_cyl'))
+            h5f.create_dataset(bsm_type + "_iso", data=h5py.File(input_file, 'r').get('full_data_iso'))
+            h5f.create_dataset(bsm_type + "_dxy", data=h5py.File(input_file, 'r').get('full_data_dxy'))
+            h5f.create_dataset(bsm_type + "_l1bit", data=h5py.File(input_file, 'r').get('L1bit'))
+            keys = h5py.File(input_file,'r').keys()
+            for key in keys:
+                if "L1_" in key:
+                    h5f.create_dataset(bsm_type + "_" + key, data=h5py.File(input_file, 'r').get(key))
         h5f.close()
 
 

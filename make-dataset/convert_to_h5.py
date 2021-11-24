@@ -40,8 +40,11 @@ def convert_to_h5(input_file, output_file, tree_name, uGT_tree_name):
     l1Jet_cart = np.array([])
     l1mu_cyl = np.array([])
     l1mu_cart = np.array([])
+    l1mu_iso = np.array([])
+    l1mu_dxy = np.array([])
     l1ele_cyl = np.array([])
     l1ele_cart = np.array([])
+    l1ele_iso = np.array([])
     l1sum_cyl = np.array([])
     l1sum_cart = np.array([])
 
@@ -118,6 +121,8 @@ def convert_to_h5(input_file, output_file, tree_name, uGT_tree_name):
             l1Jet_cart = np.concatenate([l1Jet_cart, my_l1Jet_cart], axis=0)
 
         l1muonArray = np.array([])
+        l1muonIso   = np.array([])
+        l1muonDxy   = np.array([])
         for j in range(evt.nMuons):
             myL1muon = ROOT.TLorentzVector()
             myL1muon.SetPtEtaPhiM(evt.muonEt[j], evt.muonEta[j], evt.muonPhi[j], 0.)
@@ -126,13 +131,20 @@ def convert_to_h5(input_file, output_file, tree_name, uGT_tree_name):
             my_l1mu = np.reshape(my_l1mu, (1, my_l1mu.shape[0]))
             # append info to arrays
             l1muonArray = np.concatenate([l1muonArray, my_l1mu], axis=0) if l1muonArray.size else my_l1mu
+            l1muonIso = np.append(l1muonIso, [evt.muonIso[j]])
+            l1muonDxy = np.append(l1muonDxy, [evt.muonDxy[j]])
         missing = 4-l1muonArray.shape[0]
         if missing > 0:
             zeros = np.zeros([missing, len(cylNames)+len(cartNames)])
+            zeros_1d = np.zeros(missing)
             if not l1muonArray.size:
                 l1muonArray = zeros
+                l1muonIso = zeros_1d
+                l1muonDxy = zeros_1d
             else:
                 l1muonArray = np.concatenate([l1muonArray, zeros], axis=0)
+                l1muonIso = np.concatenate([l1muonIso, zeros_1d], axis=0)
+                l1muonDxy = np.concatenate([l1muonDxy, zeros_1d], axis=0)
         l1muonArray = l1muonArray[l1muonArray[:,0].argsort()]
         l1muonArray = l1muonArray[::-1]
         l1muonArray =l1muonArray[:4,:]
@@ -140,6 +152,12 @@ def convert_to_h5(input_file, output_file, tree_name, uGT_tree_name):
         my_l1mu_cyl= np.reshape(my_l1mu_cyl, [1,4,len(cylNames)])
         my_l1mu_cart = l1muonArray[:,len(cylNames):]
         my_l1mu_cart = np.reshape(my_l1mu_cart, [1,4,len(cartNames)])
+        l1muonIso = l1muonIso[l1muonArray[:,0].argsort()]
+        l1muonIso = l1muonIso[:4]
+        l1muonIso = np.reshape(l1muonIso, [1,4])
+        l1muonDxy = l1muonDxy[l1muonArray[:,0].argsort()]
+        l1muonDxy = l1muonDxy[:4]
+        l1muonDxy = np.reshape(l1muonDxy, [1,4])
         if l1mu_cyl.shape[0] == 0:
             l1mu_cyl = my_l1mu_cyl
         else:
@@ -148,8 +166,17 @@ def convert_to_h5(input_file, output_file, tree_name, uGT_tree_name):
             l1mu_cart = my_l1mu_cart
         else:
             l1mu_cart = np.concatenate([l1mu_cart, my_l1mu_cart], axis=0)
+        if l1mu_iso.shape[0] == 0:
+            l1mu_iso = l1muonIso
+        else:
+            l1mu_iso = np.concatenate([l1mu_iso, l1muonIso], axis=0)
+        if l1mu_dxy.shape[0] == 0:
+            l1mu_dxy = l1muonDxy
+        else:
+            l1mu_dxy = np.concatenate([l1mu_dxy, l1muonDxy], axis=0)
 
         l1eleArray = np.array([])
+        l1eleIso   = np.array([])
         for j in range(evt.nEGs):
             myL1ele = ROOT.TLorentzVector()
             myL1ele.SetPtEtaPhiM(evt.egEt[j], evt.egEta[j], evt.egPhi[j], 0.)
@@ -158,13 +185,17 @@ def convert_to_h5(input_file, output_file, tree_name, uGT_tree_name):
             my_l1ele = np.reshape(my_l1ele, (1, my_l1ele.shape[0]))
             # append info to arrays
             l1eleArray = np.concatenate([l1eleArray, my_l1ele], axis=0) if l1eleArray.shape[0] > 0 else my_l1ele
+            l1eleIso = np.append(l1eleIso, [evt.egIso[j]])
         missing = 4-l1eleArray.shape[0]
         if missing > 0:
             zeros = np.zeros([missing, len(cylNames)+len(cartNames)])
+            zeros_1d = np.zeros(missing)
             if not l1eleArray.size:
                 l1eleArray = zeros
+                l1eleIso = zeros_1d
             else:
                 l1eleArray = np.concatenate([l1eleArray, zeros], axis=0)
+                l1eleIso = np.concatenate([l1eleIso, zeros_1d], axis=0)
         l1eleArray = l1eleArray[l1eleArray[:,0].argsort()]
         l1eleArray = l1eleArray[::-1]
         l1eleArray = l1eleArray[:4,:]
@@ -172,6 +203,9 @@ def convert_to_h5(input_file, output_file, tree_name, uGT_tree_name):
         my_l1ele_cyl = np.reshape(my_l1ele_cyl, [1,4,len(cylNames)])
         my_l1ele_cart = l1eleArray[:,len(cylNames):]
         my_l1ele_cart= np.reshape(my_l1ele_cart, [1,4,len(cartNames)])
+        l1eleIso = l1eleIso[l1eleArray[:,0].argsort()]
+        l1eleIso = l1eleIso[:4]
+        l1eleIso = np.reshape(l1eleIso, [1,4])
         if  l1ele_cyl.shape[0] == 0:
             l1ele_cyl = my_l1ele_cyl
         else:
@@ -180,6 +214,10 @@ def convert_to_h5(input_file, output_file, tree_name, uGT_tree_name):
             l1ele_cart = my_l1ele_cart
         else:
             l1ele_cart = np.concatenate([l1ele_cart, my_l1ele_cart], axis=0)
+        if l1ele_iso.shape[0] == 0:
+            l1ele_iso = l1eleIso
+        else:
+            l1ele_iso = np.concatenate([l1ele_iso, l1eleIso], axis=0)
 
     inFile.Close()
 
@@ -190,8 +228,11 @@ def convert_to_h5(input_file, output_file, tree_name, uGT_tree_name):
     outFile.create_dataset('l1Jet_cart', data=l1Jet_cart, compression='gzip')
     outFile.create_dataset('l1Muon_cyl', data=l1mu_cyl, compression='gzip')
     outFile.create_dataset('l1Muon_cart', data=l1mu_cart, compression='gzip')
+    outFile.create_dataset('l1Muon_Iso', data=l1mu_iso, compression='gzip')
+    outFile.create_dataset('l1Muon_Dxy', data=l1mu_dxy, compression='gzip')
     outFile.create_dataset('l1Ele_cyl', data=l1ele_cyl, compression='gzip')
     outFile.create_dataset('l1Ele_cart', data=l1ele_cart, compression='gzip')
+    outFile.create_dataset('l1Ele_Iso', data=l1ele_iso, compression='gzip')
     outFile.create_dataset('l1Sum_cyl', data = l1sum_cyl, compression='gzip')
     outFile.create_dataset('l1Sum_cart', data = l1sum_cart, compression='gzip')
     for seed, values in seeds.iteritems():
