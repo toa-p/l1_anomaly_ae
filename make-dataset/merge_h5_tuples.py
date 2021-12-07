@@ -47,6 +47,7 @@ def merge_h5_tuples_bsm(output_file, input_files, bsm):
             h5f.create_dataset(bsm_type, data=h5py.File(input_file, 'r').get('full_data_cyl'))
             h5f.create_dataset(bsm_type + "_iso", data=h5py.File(input_file, 'r').get('full_data_iso'))
             h5f.create_dataset(bsm_type + "_dxy", data=h5py.File(input_file, 'r').get('full_data_dxy'))
+            h5f.create_dataset(bsm_type + "_upt", data=h5py.File(input_file, 'r').get('full_data_upt'))
             h5f.create_dataset(bsm_type + "_l1bit", data=h5py.File(input_file, 'r').get('L1bit'))
             keys = h5py.File(input_file,'r').keys()
             for key in keys:

@@ -56,6 +56,10 @@ def read_data(input_file):
     mydata = np.array(f.get('l1Muon_Dxy'))
     m_dxy = mydata
     del mydata
+    #Muon upT
+    mydata = np.array(f.get('l1Muon_Upt'))
+    m_upt = mydata
+    del mydata
 
     #L1bit
     mydata = np.array(f.get('L1bit'))
@@ -84,16 +88,17 @@ def read_data(input_file):
     #TODO: how best to include e_iso, m_iso, m_dxy?
     full_data_iso = np.concatenate([np.zeros([met_cyl.shape[0],met_cyl.shape[1]]), e_iso, m_iso, np.zeros([j_cyl.shape[0],j_cyl.shape[1]])], axis=1)
     full_data_dxy = np.concatenate([np.zeros([met_cyl.shape[0],met_cyl.shape[1]]), np.zeros([e_cyl.shape[0],e_cyl.shape[1]]), m_dxy, np.zeros([j_cyl.shape[0],j_cyl.shape[1]])], axis=1)
+    full_data_upt = np.concatenate([np.zeros([met_cyl.shape[0],met_cyl.shape[1]]), np.zeros([e_cyl.shape[0],e_cyl.shape[1]]), m_upt, np.zeros([j_cyl.shape[0],j_cyl.shape[1]])], axis=1)
     print('Done concatenating')
     print('The full cyl data shape is: ',full_data_cyl.shape)
     print('The full cart data shape is: ',full_data_cart.shape)
     print('The full iso data shape is: ',full_data_iso.shape)
     print('The full dxy data shape is: ',full_data_dxy.shape)
-    return full_data_cyl, full_data_cart, full_data_iso, full_data_dxy, l1bit, seedinfo
+    return full_data_cyl, full_data_cart, full_data_iso, full_data_dxy, full_data_upt, l1bit, seedinfo
 
 def preprocess(input_file, output_file):
 
-    full_data_cyl, full_data_cart, full_data_iso, full_data_dxy, l1bit, seedinfo = read_data(input_file)
+    full_data_cyl, full_data_cart, full_data_iso, full_data_dxy, full_data_upt, l1bit, seedinfo = read_data(input_file)
 
     #Save this full_data_cyl
     h5f = h5py.File(output_file, 'w')
@@ -101,6 +106,7 @@ def preprocess(input_file, output_file):
     h5f.create_dataset('full_data_cart', data=full_data_cart)
     h5f.create_dataset('full_data_iso', data=full_data_iso)
     h5f.create_dataset('full_data_dxy', data=full_data_dxy)
+    h5f.create_dataset('full_data_upt', data=full_data_upt)
     h5f.create_dataset('L1bit', data=l1bit)
     for seed, seed_data in seedinfo.iteritems():
         h5f.create_dataset(seed, data=seed_data)

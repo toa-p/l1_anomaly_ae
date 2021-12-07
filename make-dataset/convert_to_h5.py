@@ -42,6 +42,7 @@ def convert_to_h5(input_file, output_file, tree_name, uGT_tree_name):
     l1mu_cart = np.array([])
     l1mu_iso = np.array([])
     l1mu_dxy = np.array([])
+    l1mu_upt = np.array([])
     l1ele_cyl = np.array([])
     l1ele_cart = np.array([])
     l1ele_iso = np.array([])
@@ -123,6 +124,7 @@ def convert_to_h5(input_file, output_file, tree_name, uGT_tree_name):
         l1muonArray = np.array([])
         l1muonIso   = np.array([])
         l1muonDxy   = np.array([])
+        l1muonUpt   = np.array([])
         for j in range(evt.nMuons):
             myL1muon = ROOT.TLorentzVector()
             myL1muon.SetPtEtaPhiM(evt.muonEt[j], evt.muonEta[j], evt.muonPhi[j], 0.)
@@ -133,6 +135,7 @@ def convert_to_h5(input_file, output_file, tree_name, uGT_tree_name):
             l1muonArray = np.concatenate([l1muonArray, my_l1mu], axis=0) if l1muonArray.size else my_l1mu
             l1muonIso = np.append(l1muonIso, [evt.muonIso[j]])
             l1muonDxy = np.append(l1muonDxy, [evt.muonDxy[j]])
+            l1muonUpt = np.append(l1muonUpt, [evt.muonEtUnconstrained[j]])
         missing = 4-l1muonArray.shape[0]
         if missing > 0:
             zeros = np.zeros([missing, len(cylNames)+len(cartNames)])
@@ -141,10 +144,12 @@ def convert_to_h5(input_file, output_file, tree_name, uGT_tree_name):
                 l1muonArray = zeros
                 l1muonIso = zeros_1d
                 l1muonDxy = zeros_1d
+                l1muonUpt = zeros_1d
             else:
                 l1muonArray = np.concatenate([l1muonArray, zeros], axis=0)
                 l1muonIso = np.concatenate([l1muonIso, zeros_1d], axis=0)
                 l1muonDxy = np.concatenate([l1muonDxy, zeros_1d], axis=0)
+                l1muonUpt = np.concatenate([l1muonUpt, zeros_1d], axis=0)
         l1muonArray = l1muonArray[l1muonArray[:,0].argsort()]
         l1muonArray = l1muonArray[::-1]
         l1muonArray =l1muonArray[:4,:]
@@ -158,6 +163,9 @@ def convert_to_h5(input_file, output_file, tree_name, uGT_tree_name):
         l1muonDxy = l1muonDxy[l1muonArray[:,0].argsort()]
         l1muonDxy = l1muonDxy[:4]
         l1muonDxy = np.reshape(l1muonDxy, [1,4])
+        l1muonUpt = l1muonUpt[l1muonArray[:,0].argsort()]
+        l1muonUpt = l1muonUpt[:4]
+        l1muonUpt = np.reshape(l1muonUpt, [1,4])
         if l1mu_cyl.shape[0] == 0:
             l1mu_cyl = my_l1mu_cyl
         else:
@@ -174,6 +182,10 @@ def convert_to_h5(input_file, output_file, tree_name, uGT_tree_name):
             l1mu_dxy = l1muonDxy
         else:
             l1mu_dxy = np.concatenate([l1mu_dxy, l1muonDxy], axis=0)
+        if l1mu_upt.shape[0] == 0:
+            l1mu_upt = l1muonUpt
+        else:
+            l1mu_upt = np.concatenate([l1mu_upt, l1muonUpt], axis=0)
 
         l1eleArray = np.array([])
         l1eleIso   = np.array([])
@@ -230,6 +242,7 @@ def convert_to_h5(input_file, output_file, tree_name, uGT_tree_name):
     outFile.create_dataset('l1Muon_cart', data=l1mu_cart, compression='gzip')
     outFile.create_dataset('l1Muon_Iso', data=l1mu_iso, compression='gzip')
     outFile.create_dataset('l1Muon_Dxy', data=l1mu_dxy, compression='gzip')
+    outFile.create_dataset('l1Muon_Upt', data=l1mu_upt, compression='gzip')
     outFile.create_dataset('l1Ele_cyl', data=l1ele_cyl, compression='gzip')
     outFile.create_dataset('l1Ele_cart', data=l1ele_cart, compression='gzip')
     outFile.create_dataset('l1Ele_Iso', data=l1ele_iso, compression='gzip')
