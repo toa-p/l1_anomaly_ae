@@ -110,7 +110,7 @@ with the one you want to run.
 
 ### Prepare the data: 
 
-Input data must be prepared with ``prepare_data.py```, which accepts as inputs preprocessed QCD and/or preprocessed BSM h5 files and outputs a pickle file. For example: 
+Input data must be prepared with ```prepare_data.py```, which accepts as inputs preprocessed QCD and/or preprocessed BSM h5 files and outputs a pickle file. For example: 
 ```
 python prepare_data.py -—input-file QCD_preprocessed.h5 —-output-file QCD_prepared.pickle
 ```
