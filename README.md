@@ -105,3 +105,29 @@ This will run in sequence the following steps:
 
 If one of the step fails for any reason, one can run one specific rule (eg, the merge or process steps as indicated above). In this case replace the rule
 with the one you want to run.
+
+### Using CNN AE Programs 
+
+### Prepare the data: 
+
+Input data must be prepared with ``prepare_data.py```, which accepts as inputs preprocessed QCD and/or preprocessed BSM h5 files and outputs a pickle file. For example: 
+```
+python prepare_data.py —input-file QCD_preprocessed.h5 —output-file QCD_prepared.pickle
+```
+
+To organize the prepared input files, make an ```output``` directory and move the prepared files to it: 
+```
+mkdir output
+mv QCD_prepared.pickle output
+```
+
+### Training 
+
+Before running ```train.py```, open the source code and modify the filename in the ```with open``` statement to the desired input file. For example: 
+```
+with open('output/QCD_prepared.pickle', 'rb') as f:
+```
+The training program requires the input of the latent dimension, filenames for the output model, a filename for the history, the batch size, and the epoch size. For example: 
+```
+python train.py --latent-dim 4 --output-model-h5 output_model.h5 --output-model-json output_model.json --output-history history.h5 --batch-size 256 --n-epochs 30
+```
