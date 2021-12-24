@@ -25,11 +25,16 @@ conda create --name l1ad --file env.txt
 conda activate l1ad
 ```
 
-Install some missing packages:
+**NB: the cudnn version in the env.txt might be incompatible with your cuda version. Check [here](https://repo.anaconda.com/pkgs/main/linux-64/) for different versions.**
+
+Install some additional packages:
 
 ```
 pip install h5py
 pip install uproot
+pip install tensorflow
+pip install tensorflow_model_optimization
+pip install setGPU
 ```
 
 Activate the environment (nb, every time you login):
@@ -110,24 +115,20 @@ with the one you want to run.
 
 ### Prepare the data: 
 
-Input data must be prepared with ```prepare_data.py```, which accepts as inputs preprocessed QCD and/or preprocessed BSM h5 files and outputs a pickle file. For example: 
+Input data must be prepared with ```prepare_data.py```, which accepts as inputs preprocessed QCD and/or preprocessed BSM h5 files and outputs a pickle file with train/test events split to be used downstream for the train and evaluation steps. For example: 
+
 ```
 python prepare_data.py --input-file QCD_preprocessed.h5 --output-file QCD_prepared.pickle
 ```
 
-To organize the prepared input files, make an ```output``` directory and move the prepared files to it: 
-```
-mkdir output
-mv QCD_prepared.pickle output
-```
+nb, this script has the list of BSM signals [hardcoded](https://gitlab.cern.ch/cms-l1-ad/l1_anomaly_ae/-/blob/master/cnn/prepare_data.py#L37-L52) and you might want to change if new signals will be added or if unused signals will be removed.
 
 ### Training 
 
-Before running ```train.py```, open the source code and modify the filename in the ```with open``` statement to the desired input file. For example: 
+The training program requires the input of the latent dimension, filenames for the output model (h5 and json), the training data pickle file, the history, but also the batch size, and the number of epochs. For example: 
+
 ```
-with open('output/QCD_prepared.pickle', 'rb') as f:
+python train.py --latent-dim 4 --output-model-h5 output_model.h5 --output-model-json output_model.json --input-data QCD_prepared.pickle --output-history history.h5 --batch-size 256 --n-epochs 30
 ```
-The training program requires the input of the latent dimension, filenames for the output model, a filename for the history, the batch size, and the epoch size. For example: 
-```
-python train.py --latent-dim 4 --output-model-h5 output_model.h5 --output-model-json output_model.json --output-history history.h5 --batch-size 256 --n-epochs 30
-```
+
+### Performance evaluation

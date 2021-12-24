@@ -14,7 +14,7 @@ import tensorflow_model_optimization as tfmot
 import pickle
 import setGPU
 
-def train(model_type, quant_size, pruning, latent_dim, output_model_h5,
+def train(model_type, quant_size, pruning, latent_dim, input_data, output_model_h5,
     output_model_json, output_history, batch_size,
     n_epochs, beta):
     # magic trick to make sure that Lambda function works
@@ -26,7 +26,8 @@ def train(model_type, quant_size, pruning, latent_dim, output_model_h5,
     config.gpu_options.allow_growth = True
     session = InteractiveSession(config=config)
 
-    with open('output/data_-1.pickle', 'rb') as f:
+    #with open('output/data_-1.pickle', 'rb') as f:
+    with open(input_data, 'rb') as f:
         x_train, y_train, x_test, y_test, all_bsm_data, pt_scaler = pickle.load(f)
 
     if model_type=='conv_vae':
@@ -64,11 +65,11 @@ def train(model_type, quant_size, pruning, latent_dim, output_model_h5,
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model-type', default='conv_vae',
-        choices=['conv_vae', 'conv_ae'], help='Which model to use')
+    parser.add_argument('--model-type', default='conv_vae', choices=['conv_vae', 'conv_ae'], help='Which model to use')
     parser.add_argument('--quant-size', default=0, type=int, help='Train quantized model with QKeras')
     parser.add_argument('--pruning', type=str, help='Train with pruning')
     parser.add_argument('--latent-dim', type=int, required=True, help='Latent space dimension')
+    parser.add_argument('--input-data', type=str, help='Training data', required=True)
     parser.add_argument('--output-model-h5', type=str, help='Output file with the model', required=True)
     parser.add_argument('--output-model-json', type=str, help='Output file with the model', required=True)
     parser.add_argument('--output-history', type=str, help='Output file with the model training history', required=True)
