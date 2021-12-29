@@ -111,6 +111,13 @@ This will run in sequence the following steps:
 If one of the step fails for any reason, one can run one specific rule (eg, the merge or process steps as indicated above). In this case replace the rule
 with the one you want to run.
 
+To process 120X samples:
+
+```
+snakemake merge_all_bsm_types --cores 8 --snakefile Snakefile-120X --configfile config-120X.yaml
+snakemake convert_all --cores 8 --snakefile Snakefile-120X --configfile config-120X.yaml
+```
+
 ### Using CNN AE Programs 
 
 ### Prepare the data: 

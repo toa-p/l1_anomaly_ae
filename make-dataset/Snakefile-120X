@@ -1,0 +1,211 @@
+configfile: 'config.yaml'
+
+rule copy_root_from_eos:
+    ''' Copy root tuples from eos to local dir before accessing them
+        due to regular issues accessing eos files directly '''
+    input:
+        config['path'] + config['eos_root_samples']
+    output:
+        directory('output/root_samples/')
+    shell:
+        'for i in {{1..334}}; do \n\
+            echo "cp {input}L1Ntuple_$i.root {output}L1Ntuple_$i.root" \n\
+            cp {input}L1Ntuple_$i.root {output}L1Ntuple_$i.root || : \n\
+        done'
+ 
+rule convert:
+    ''' Convert given root tuple to h5 format '''
+    input:
+        script = 'convert_to_h5.py',
+        input_file = config['path'] + config['eos_root_samples'] +'L1Ntuple_{id}.root'
+    output:
+        output_file = config['output_h5'] + '/NuGun/L1Ntuple_{id}.h5'
+    shell:
+        'cd ' + config['cmssw_dir'] + '; eval `scramv1 runtime -sh`; cd -;'
+        'python {input.script} --input-file {input.input_file} \
+                               --output-file {output}'
+
+
+IDS = list(range(1,206))
+rule convert_all:
+    ''' Convert all root tuples to h5 format '''
+    input:
+        expand(rules.convert.output, id=IDS)
+
+rule merge_h5_tuples:
+    ''' Merge all converted to h5 format tuples into one file '''
+    input:
+        script = 'merge_h5_tuples.py',
+        input_files = expand(rules.convert.output, id=IDS)
+    output:
+        file = config['output_h5'] + '/L1Ntuple_NuGun.h5'
+    shell:
+        'python {input.script} --input-files {input.input_files} \
+                               --output-file {output.file}'
+
+rule preprocess:
+    ''' Concatenate and normalize input dataset '''
+    input:
+        script = 'preprocess.py',
+        file = rules.merge_h5_tuples.output.file
+    output:
+        h5 = config['output_h5'] + '/NuGun_preprocessed.h5'
+    shell:
+        'python {input.script} --input-file {input.file} \
+                               --output-file {output.h5}'
+
+rule convert_bsm:
+    ''' Convert given root tuple to h5 format '''
+    input:
+        script = 'convert_to_h5.py',
+        input_file = lambda wildcards: config['path'] + config[wildcards.bsm_type] + 'L1Ntuple_{id}.root'
+    output:
+        output_file = config['output_h5'] + '/{bsm_type}/L1Ntuple_{id}.h5'
+    params:
+        tree_name = 'l1UpgradeTree/L1UpgradeTree'
+    shell:
+        'cd ' + config['cmssw_dir'] + '; eval `scramv1 runtime -sh`; cd -;'
+        'python {input.script} --input-file {input.input_file} \
+                               --output-file {output} \
+                               --tree-name {params.tree_name}'
+
+IDS_BSM = {
+
+	'GluGluHToTauTau_M125': list(range(1,200)),
+	'GluGluToHHTo4B_cHHH1': list(range(1,67)),
+	'GluGluToHHTo4B_cHHH5': list(range(1,74)),
+	'HTo2LongLivedTo4b_MH1000_MFF450_CTau100m': list(range(1,28)),
+	'HTo2LongLivedTo4b_MH1000_MFF450_CTau10m': list(range(1,29)),
+	'HTo2LongLivedTo4b_MH125_MFF12_CTau9m': list(range(1,27)),
+	'HTo2LongLivedTo4b_MH125_MFF12_CTau0p9m': list(range(1,23)),
+	'HTo2LongLivedTo4b_MH125_MFF25_CTau15m': list(range(1,24)),
+	'HTo2LongLivedTo4b_MH125_MFF25_CTau1p5m': list(range(1,30)),
+	'HTo2LongLivedTo4b_MH125_MFF50_CTau30m': list(range(1,26)),
+	'HTo2LongLivedTo4b_MH125_MFF50_CTau3m': list(range(1,25)),
+	'HTo2LongLivedTo4b_MH250_MFF120_CTau10m': list(range(1,26)),
+	'HTo2LongLivedTo4b_MH250_MFF120_CTau1m': [i for i in range(1,18) if i!=10 and i!=16],
+	'HTo2LongLivedTo4b_MH250_MFF60_CTau1m': list(range(1,28)),
+	'HTo2LongLivedTo4b_MH350_MFF160_CTau10m': list(range(1,27)),
+	'HTo2LongLivedTo4b_MH350_MFF160_CTau1m': list(range(1,31)),
+	'HTo2LongLivedTo4b_MH350_MFF160_CTau0p5m': list(range(1,26)),
+	'HTo2LongLivedTo4b_MH350_MFF80_CTau10m': list(range(1,31)),
+	'HTo2LongLivedTo4b_MH350_MFF80_CTau1m': list(range(1,27)),
+	'HTo2LongLivedTo4b_MH350_MFF80_CTau0p5m': list(range(1,22)),
+	'HTo2LongLivedTo4mu_MH1000_MFF450_CTau10m': list(range(1,3)),
+	'HTo2LongLivedTo4mu_MH125_MFF12_CTau0p9m': list(range(1,26)),
+	'HTo2LongLivedTo4mu_MH125_MFF25_CTau1p5m': list(range(1,21)),
+	'HTo2LongLivedTo4mu_MH125_MFF50_CTau3m': list(range(1,25)),
+	'SUSYGluGluToBBHToBB_M1200': list(range(1,32)),
+	'SUSYGluGluToBBHToBB_M120': list(range(1,328)),
+	'SUSYGluGluToBBHToBB_M350': list(range(1,122)),
+	'SUSYGluGluToBBHToBB_M600': list(range(1,29)),
+	'TprimeBToTH_M650': list(range(1,67)),
+	'VBFHHTo4B_CV_1_C2V_2_C3_1': list(range(1,72)),
+	'VBFHToInvisible_M125': list(range(1,218)),
+	'VBFHToTauTau_M125': list(range(1,205)),
+	'VectorZPrimeGammaToQQGamma_M10_GPt75': list(range(1,28)),
+	'VectorZPrimeToQQ_M100_Pt300': list(range(1,31)),
+	'VectorZPrimeToQQ_M200_Pt300': list(range(1,31))
+
+    }
+
+rule merge_h5_bsm_type:
+    ''' Merge all converted to h5 format tuples into one file '''
+    input:
+        script = 'merge_h5_tuples.py',
+        input_files = lambda wildcards: expand(rules.convert_bsm.output.output_file,
+          id=IDS_BSM[wildcards.bsm_type],
+          bsm_type=wildcards.bsm_type)
+    output:
+        file = config['output_h5']+'/L1Ntuple_{bsm_type}.h5'
+    shell:
+        'python {input.script} --input-files {input.input_files} \
+                               --output-file {output.file}'
+
+rule preprocess_bsm:
+    ''' Concatenate and normalize input dataset '''
+    input:
+        script = 'preprocess.py',
+        file = lambda wildcards: expand(rules.merge_h5_bsm_type.output,
+            bsm_type=wildcards.bsm_type)
+    output:
+        config['output_h5']+'/BSM_preprocessed_{bsm_type}.h5'
+    shell:
+        'python {input.script} --input-file {input.file} \
+                               --output-file {output}'
+
+rule merge_all_bsm_types:
+    ''' Merge all converted to h5 format tuples into one file '''
+    input:
+        script = 'merge_h5_tuples.py',
+        input_files = expand(rules.preprocess_bsm.output,
+            bsm_type=IDS_BSM.keys())
+    output:
+        file = config['output_h5']+'/BSM_preprocessed.h5'
+    shell:
+        'python {input.script} --input-files {input.input_files} \
+                               --output-file {output.file} \
+                               --bsm --release 120X'
+
+rule prepare_data:
+    ''' Prepare data for training'''
+    input:
+        script = 'prepare_data.py',
+        qcd = config['samples']+'NuGun_preprocessed.h5',
+    output:
+        'output/data_{events}.pickle'
+    params:
+        bsm = rules.merge_all_bsm_types.output
+    shell:
+        'python {input.script} --output-file {output} \
+                               --input-file {input.qcd} \
+                               --events {wildcards.events} \
+                               --input-bsm {params.bsm} '
+
+rule train:
+    ''' Train specified model, save result in h5 file '''
+    input:
+    output:
+        h5 = 'output/model-{model}-{latent_dim}-b{beta}-q{quant_size}-{pruning}.h5',
+        json = 'output/model-{model}-{latent_dim}-b{beta}-q{quant_size}-{pruning}.json',
+        history = 'output/history-{model}-{latent_dim}-b{beta}-q{quant_size}-{pruning}.pickle'
+    shell:
+        'python train.py --output-model-h5 {output.h5} \
+                         --output-model-json {output.json} \
+                         --output-history {output.history} \
+                         --batch-size 1024 \
+                         --quant-size {wildcards.quant_size} \
+                         --n-epochs 100 \
+                         --pruning {wildcards.pruning} \
+                         --latent-dim {wildcards.latent_dim} \
+                         --model-type {wildcards.model} \
+                         --beta {wildcards.beta}'
+
+rule evaluate:
+    input:
+        script = 'evaluate.py',
+        data = expand(rules.prepare_data.output, events=-1),
+        h5 = 'output/model-{model}-{latent_dim}-b{beta}-q{quant_size}-{pruning}.h5',
+        json = 'output/model-{model}-{latent_dim}-b{beta}-q{quant_size}-{pruning}.json',
+        history = 'output/history-{model}-{latent_dim}-b{beta}-q{quant_size}-{pruning}.pickle'
+    output:
+        result = 'output/result-{model}-{latent_dim}-b{beta}-q{quant_size}-{pruning}.h5'
+    shell:
+        'python {input.script} --input-file {input.data} \
+                               --input-h5 {input.h5} \
+                               --input-json {input.json} \
+                               --input-history {input.history} \
+                               --output-result {output.result}'
+
+rule plot:
+    ''' Plot the result of the training '''
+    input:
+        script = 'plot.py',
+        trained_vae = 'output/'
+    output:
+        directory('plots/')
+    shell:
+        'python {input.script} --model cae \
+                               --loss-type split_3D \
+                               --input-dir {input.trained_vae} \
+                               --output-dir {output}'

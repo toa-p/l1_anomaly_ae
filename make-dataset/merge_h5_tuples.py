@@ -5,11 +5,11 @@ import h5py
 import numpy as np
 import argparse
 
-def merge_h5_tuples(output_file, input_files, bsm):
+def merge_h5_tuples(output_file, input_files, bsm, release):
 
         #keys = ['l1Ele_cart', 'l1Ele_cyl', 'l1Jet_cart', 'l1Jet_cyl', 'l1Muon_cart', 'l1Muon_cyl', 'l1Sum_cyl', 'l1Sum_cart',
         #        'l1Ele_Iso', 'l1Muon_Iso', 'l1Muon_Dxy', 'L1bit']
-        keys = h5py.File(input_file[0]).keys()
+        keys = h5py.File(input_files[0],'r').keys()
         data = {feature: np.array for feature in keys}
 
         input_files = [os.path.join(input_files[0], f) for f in os.listdir(input_files[0]) if os.path.isfile(os.path.join(input_files[0], f))] \
@@ -23,7 +23,7 @@ def merge_h5_tuples(output_file, input_files, bsm):
             h5f.create_dataset(feature, data=data[feature])
         h5f.close()
 
-def merge_h5_tuples_bsm(output_file, input_files, bsm):
+def merge_h5_tuples_bsm(output_file, input_files, bsm, release):
 
         h5f = h5py.File(output_file, 'w')
         bsm_types = ['VectorZPrimeToQQ__M50',
@@ -55,14 +55,67 @@ def merge_h5_tuples_bsm(output_file, input_files, bsm):
                     h5f.create_dataset(bsm_type + "_" + key, data=h5py.File(input_file, 'r').get(key))
         h5f.close()
 
+def merge_h5_tuples_bsm_120X(output_file, input_files, bsm, release):
 
+        h5f = h5py.File(output_file, 'w')
+        bsm_types = [ 'GluGluHToTauTau_M125',
+		      'GluGluToHHTo4B_cHHH1',
+		      'GluGluToHHTo4B_cHHH5',
+		      'HTo2LongLivedTo4b_MH1000_MFF450_CTau100m',
+		      'HTo2LongLivedTo4b_MH1000_MFF450_CTau10m',
+		      'HTo2LongLivedTo4b_MH125_MFF12_CTau9m',
+		      'HTo2LongLivedTo4b_MH125_MFF12_CTau0p9m', 
+		      'HTo2LongLivedTo4b_MH125_MFF25_CTau15m',
+		      'HTo2LongLivedTo4b_MH125_MFF25_CTau1p5m', 
+		      'HTo2LongLivedTo4b_MH125_MFF50_CTau30m',
+		      'HTo2LongLivedTo4b_MH125_MFF50_CTau3m',
+		      'HTo2LongLivedTo4b_MH250_MFF120_CTau10m',
+		      'HTo2LongLivedTo4b_MH250_MFF120_CTau1m',
+		      'HTo2LongLivedTo4b_MH250_MFF60_CTau1m',
+		      'HTo2LongLivedTo4b_MH350_MFF160_CTau10m', 
+		      'HTo2LongLivedTo4b_MH350_MFF160_CTau1m',
+		      'HTo2LongLivedTo4b_MH350_MFF160_CTau0p5m',
+		      'HTo2LongLivedTo4b_MH350_MFF80_CTau10m',
+		      'HTo2LongLivedTo4b_MH350_MFF80_CTau1m',
+		      'HTo2LongLivedTo4b_MH350_MFF80_CTau0p5m',
+		      'HTo2LongLivedTo4mu_MH1000_MFF450_CTau10m',
+		      'HTo2LongLivedTo4mu_MH125_MFF12_CTau0p9m',
+		      'HTo2LongLivedTo4mu_MH125_MFF25_CTau1p5m',
+		      'HTo2LongLivedTo4mu_MH125_MFF50_CTau3m',
+		      'SUSYGluGluToBBHToBB_M1200',
+		      'SUSYGluGluToBBHToBB_M120',
+		      'SUSYGluGluToBBHToBB_M350',
+		      'SUSYGluGluToBBHToBB_M600',
+		      'TprimeBToTH_M650',
+		      'VBFHHTo4B_CV_1_C2V_2_C3_1',
+		      'VBFHToInvisible_M125',
+		      'VBFHToTauTau_M125',
+		      'VectorZPrimeGammaToQQGamma_M10_GPt75',
+		      'VectorZPrimeToQQ_M100_Pt300',
+		      'VectorZPrimeToQQ_M200_Pt300',
+                    ]
+        for bsm_type in bsm_types:
+            input_file = [f for f in input_files if bsm_type in f][0]
+            h5f.create_dataset(bsm_type, data=h5py.File(input_file, 'r').get('full_data_cyl'))
+            h5f.create_dataset(bsm_type + "_iso", data=h5py.File(input_file, 'r').get('full_data_iso'))
+            h5f.create_dataset(bsm_type + "_dxy", data=h5py.File(input_file, 'r').get('full_data_dxy'))
+            h5f.create_dataset(bsm_type + "_upt", data=h5py.File(input_file, 'r').get('full_data_upt'))
+            h5f.create_dataset(bsm_type + "_l1bit", data=h5py.File(input_file, 'r').get('L1bit'))
+            keys = h5py.File(input_file,'r').keys()
+            for key in keys:
+                if "L1_" in key:
+                    h5f.create_dataset(bsm_type + "_" + key, data=h5py.File(input_file, 'r').get(key))
+        h5f.close()
+	
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--output-file', type=str, help='output file', required=True)
     parser.add_argument('--input-files', type=str, nargs='+', help='input files', required=True)
     parser.add_argument('--bsm', action='store_true')
+    parser.add_argument('--release', type=str, help='CMSSW release', default='110X')
     args = parser.parse_args()
     if not args.bsm:
         merge_h5_tuples(**vars(args))
     else:
-        merge_h5_tuples_bsm(**vars(args))
+        if args.release=='120X': merge_h5_tuples_bsm_120X(**vars(args))
+        else: merge_h5_tuples_bsm(**vars(args))
