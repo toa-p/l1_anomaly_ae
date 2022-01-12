@@ -35,6 +35,15 @@ pip install uproot
 pip install tensorflow
 pip install tensorflow_model_optimization
 pip install setGPU
+pip install matplotlib
+```
+
+Install QKeras in the same or another folders:
+
+```
+git clone https://github.com/google/qkeras.git
+cd qkeras
+python setup.py install
 ```
 
 Activate the environment (nb, every time you login):
@@ -118,24 +127,40 @@ snakemake merge_all_bsm_types --cores 8 --snakefile Snakefile-120X --configfile 
 snakemake convert_all --cores 8 --snakefile Snakefile-120X --configfile config-120X.yaml
 ```
 
-### Using CNN AE Programs 
+### Train and evaluate CNN models:
 
-### Prepare the data: 
+#### Prepare the data
 
 Input data must be prepared with ```prepare_data.py```, which accepts as inputs preprocessed QCD and/or preprocessed BSM h5 files and outputs a pickle file with train/test events split to be used downstream for the train and evaluation steps. For example: 
 
 ```
-python prepare_data.py --input-file QCD_preprocessed.h5 --output-file QCD_prepared.pickle
+python prepare_data.py --input-file QCD_preprocessed.h5 --input-bsm BSM_preprocessed.h5 --output-file data.pickle
 ```
 
 nb, this script has the list of BSM signals [hardcoded](https://gitlab.cern.ch/cms-l1-ad/l1_anomaly_ae/-/blob/master/cnn/prepare_data.py#L37-L52) and you might want to change if new signals will be added or if unused signals will be removed.
 
-### Training 
+#### Training 
 
 The training program requires the input of the latent dimension, filenames for the output model (h5 and json), the training data pickle file, the history, but also the batch size, and the number of epochs. For example: 
 
 ```
-python train.py --latent-dim 4 --output-model-h5 output_model.h5 --output-model-json output_model.json --input-data QCD_prepared.pickle --output-history history.h5 --batch-size 256 --n-epochs 30
+python train.py --latent-dim 4 --output-model-h5 output_model.h5 --output-model-json output_model.json --input-data data.pickle --output-history history.h5 --batch-size 256 --n-epochs 30
 ```
 
-### Performance evaluation
+Two models can be trained: Conv VAE or Conv AE. The model can be set with `--model-type` as either `conv_vae` or `conv_ae`. Change all other options as needed.
+
+#### Performance evaluation
+
+First prepare file with predictions for the QCD test sample and BSM samples:
+
+```
+python evaluate.py --input-h5 output_model.h5 --input-json output_model.json --input-history history.h5 --output-result result.h5 --input-file data.pickle
+```
+
+Make ROC curves, history and loss distributions:
+
+```
+python plot.py --coord cyl --model vae --loss-type mse_kl --output-dir ./ --input-dir ./ --label my_vae
+```
+
+Several loss types can be set and type of features. Change all other options as needed.
