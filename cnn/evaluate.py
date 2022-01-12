@@ -23,7 +23,7 @@ def evaluate(input_h5, input_json, input_file, input_history,
     # load dataset and pt scaler
     with open(input_file, 'rb') as f:
         x_train, y_train, x_test, y_test, all_bsm_data, pt_scaler = pickle.load(f)
-
+    
     # load history
     with open(input_history, 'rb') as f:
         history = pickle.load(f)
@@ -46,9 +46,26 @@ def evaluate(input_h5, input_json, input_file, input_history,
     predicted_QCD = model.predict(x_test)
     encoded_QCD = encoder.predict(x_test)
 
+    bsm_labels = ['VectorZPrimeToQQ__M50',
+                  'VectorZPrimeToQQ__M100',
+                  'VectorZPrimeToQQ__M200',
+                  'VBF_HToInvisible_M125',
+                  'VBF_HToInvisible_M125_private',
+                  'ZprimeToZH_MZprime1000',
+                  'ZprimeToZH_MZprime800',
+                  'ZprimeToZH_MZprime600',
+                  'GluGluToHHTo4B',
+                  'HTo2LongLivedTo4mu_1000',
+                  'HTo2LongLivedTo4mu_125_12',
+                  'HTo2LongLivedTo4mu_125_25',
+                  'HTo2LongLivedTo4mu_125_50',
+                  'VBFHToTauTau',
+                  'VBF_HH']
+    		     
     # test model on BSM data
     result_bsm = []
-    for i, bsm_data_name in enumerate(['Leptoquark', 'A to 4 leptons', 'hChToTauNu', 'hToTauTau']):
+    for i, bsm_data_name in enumerate(bsm_labels):
+        print(bsm_data_name) 
         bsm_data = all_bsm_data[i]
         predicted_bsm_data = model.predict(bsm_data)
         encoded_bsm = encoder.predict(bsm_data)
@@ -58,7 +75,7 @@ def evaluate(input_h5, input_json, input_file, input_history,
         bsm_data_target[:,:,0] = np.multiply(bsm_data_target[:,:,0], np.not_equal(bsm_data[:,:,0],0))
         bsm_data_target = bsm_data_target.reshape(bsm_data_target.shape[0],bsm_data_target.shape[1],bsm_data_target.shape[2],1)
         result_bsm.append([bsm_data_name, predicted_bsm_data, bsm_data_target, encoded_bsm[0], encoded_bsm[1], encoded_bsm[2]])
-
+    
     #Save results
     with h5py.File(output_result, 'w') as h5f:
         h5f.create_dataset('loss', data=history['loss'])
