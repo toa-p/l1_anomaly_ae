@@ -93,6 +93,7 @@ def merge_h5_tuples_bsm_120X(output_file, input_files, bsm, release):
 		      'VectorZPrimeGammaToQQGamma_M10_GPt75',
 		      'VectorZPrimeToQQ_M100_Pt300',
 		      'VectorZPrimeToQQ_M200_Pt300',
+		      'haa4b_ma60',
                     ]
         for bsm_type in bsm_types:
             input_file = [f for f in input_files if bsm_type in f][0]

@@ -105,7 +105,8 @@ IDS_BSM = {
 	'VBFHToTauTau_M125': list(range(1,205)),
 	'VectorZPrimeGammaToQQGamma_M10_GPt75': list(range(1,28)),
 	'VectorZPrimeToQQ_M100_Pt300': list(range(1,31)),
-	'VectorZPrimeToQQ_M200_Pt300': list(range(1,31))
+	'VectorZPrimeToQQ_M200_Pt300': list(range(1,31)),
+	'haa4b_ma60': list(range(1,492))
 
     }
 
