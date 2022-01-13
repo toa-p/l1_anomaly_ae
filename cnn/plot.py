@@ -158,7 +158,8 @@ def plot_vae(coord, model, loss_type, output_dir, input_dir, label):
     z_anomaly = []
 
     for sample in samples:
-        inval = np.array(h5f[sample])
+        if sample == 'QCD': inval = np.array(h5f[sample])
+        else: inval = np.array(h5f[sample+'_scaled'])
         outval = np.array(h5f['predicted_'+sample])
         meanval = np.array(h5f['encoded_mean_'+sample])
         logvarval = np.array(h5f['encoded_logvar_'+sample])
