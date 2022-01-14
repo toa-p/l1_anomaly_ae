@@ -27,12 +27,12 @@ def filterAlgoMap(algoMap):
             if values[4] == "1":
                 wanted_keys.append(values[1])
     filteredAlgoMap = {}
-    for seedname, bit in algoMap.iteritems():
+    for seedname, bit in algoMap.items():
         if seedname in wanted_keys:
             filteredAlgoMap[seedname] = bit
     return filteredAlgoMap
 
-def convert_to_h5(input_file, output_file, tree_name, uGT_tree_name):
+def convert_to_h5(input_file, output_file, tree_name, uGT_tree_name, event_tree_name):
 
     cylNames = ['pT', 'eta', 'phi']
     cartNames = ['px', 'py', 'pz']
@@ -48,23 +48,34 @@ def convert_to_h5(input_file, output_file, tree_name, uGT_tree_name):
     l1ele_iso = np.array([])
     l1sum_cyl = np.array([])
     l1sum_cart = np.array([])
+    
+    evtNames = ["run","lumi","event","bx","orbit","time"]
+    evt_info = np.array([])
 
     inFile = ROOT.TFile.Open(input_file, 'r')
     l1Tree = inFile.Get(tree_name)
     uGTTree = inFile.Get(uGT_tree_name)
+    evtTree = inFile.Get(event_tree_name)
 
     seeds = {}
     algo_map = filterAlgoMap(getBits(inFile, uGT_tree_name))
-    for seedname, bit in algo_map.iteritems():
+    for seedname, bit in algo_map.items():
         seeds[seedname] = np.empty([l1Tree.GetEntries()])
     seeds["L1bit"] = np.empty([l1Tree.GetEntries()])
 
     for i in range(l1Tree.GetEntries()):
         l1Tree.GetEntry(i)
         uGTTree.GetEntry(i)
+        evtTree.GetEntry(i)
         evt = l1Tree.L1Upgrade
         uGTevt = uGTTree.L1uGT
+        evtInfo = evtTree.Event
 
+        my_event = np.array([evtInfo.run,evtInfo.lumi,evtInfo.event,evtInfo.bx,evtInfo.orbit,evtInfo.time])
+	my_event = np.reshape(my_event, (1,my_event.shape[0]))
+	if evt_info.size==0: evt_info=my_event
+	else: evt_info = np.concatenate((evt_info, my_event), axis = 0) 
+	
         for seedname, bit in algo_map.iteritems():
             seeds[seedname][i] = uGTevt.getAlgoDecisionFinal(bit)
             seeds["L1bit"][i] = (seeds["L1bit"][i] or seeds[seedname][i]).astype(int)
@@ -248,6 +259,8 @@ def convert_to_h5(input_file, output_file, tree_name, uGT_tree_name):
     outFile.create_dataset('l1Ele_Iso', data=l1ele_iso, compression='gzip')
     outFile.create_dataset('l1Sum_cyl', data = l1sum_cyl, compression='gzip')
     outFile.create_dataset('l1Sum_cart', data = l1sum_cart, compression='gzip')
+    outFile.create_dataset('EventInfoNames', data = evtNames, compression='gzip')
+    outFile.create_dataset('EventInfo', data = evt_info, compression='gzip')
     for seed, values in seeds.iteritems():
         outFile.create_dataset(seed, data = values, compression='gzip')
     outFile.close()
@@ -258,5 +271,6 @@ if __name__ == '__main__':
     parser.add_argument('--output-file', type=str, required=True)
     parser.add_argument('--tree-name', type=str, default='l1UpgradeEmuTree/L1UpgradeTree')
     parser.add_argument('--uGT-tree-name', type=str, default='l1uGTEmuTree/L1uGTTree')
+    parser.add_argument('--event-tree-name', type=str, default='l1EventTree/L1EventTree')
     args = parser.parse_args()
     convert_to_h5(**vars(args))

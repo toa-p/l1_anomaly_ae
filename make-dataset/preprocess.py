@@ -77,11 +77,17 @@ def read_data(input_file):
         seedinfo[seed] = mydata
         del mydata
 
+    #Event info
+    mydata = np.array(f.get('EventInfo'))
+    evt_info = mydata
+    del mydata
+    
     print('The MET data shape is: ', met_cyl.shape, met_cart.shape)
     print('The e/gamma data shape is: ', e_cyl.shape, e_cart.shape, e_iso.shape)
     print('The muon data shape is: ', m_cyl.shape, m_cart.shape, m_iso.shape, m_dxy.shape)
     print('The jet data shape is: ', j_cyl.shape, j_cart.shape)
     print('The L1bit data shape is: ', l1bit.shape)
+    print("The event info data shape is: ",evt_info.shape)
 
     full_data_cyl = np.concatenate([met_cyl, e_cyl, m_cyl, j_cyl], axis=1)
     full_data_cart = np.concatenate([met_cart, e_cart, m_cart, j_cart], axis=1)
@@ -94,11 +100,11 @@ def read_data(input_file):
     print('The full cart data shape is: ',full_data_cart.shape)
     print('The full iso data shape is: ',full_data_iso.shape)
     print('The full dxy data shape is: ',full_data_dxy.shape)
-    return full_data_cyl, full_data_cart, full_data_iso, full_data_dxy, full_data_upt, l1bit, seedinfo
+    return full_data_cyl, full_data_cart, full_data_iso, full_data_dxy, full_data_upt, l1bit, seedinfo, evt_info
 
 def preprocess(input_file, output_file):
 
-    full_data_cyl, full_data_cart, full_data_iso, full_data_dxy, full_data_upt, l1bit, seedinfo = read_data(input_file)
+    full_data_cyl, full_data_cart, full_data_iso, full_data_dxy, full_data_upt, l1bit, seedinfo, evt_info = read_data(input_file)
 
     #Save this full_data_cyl
     h5f = h5py.File(output_file, 'w')
@@ -108,7 +114,8 @@ def preprocess(input_file, output_file):
     h5f.create_dataset('full_data_dxy', data=full_data_dxy)
     h5f.create_dataset('full_data_upt', data=full_data_upt)
     h5f.create_dataset('L1bit', data=l1bit)
-    for seed, seed_data in seedinfo.iteritems():
+    h5f.create_dataset('event_info', data=evt_info)
+    for seed, seed_data in seedinfo.items():
         h5f.create_dataset(seed, data=seed_data)
     h5f.close()
 
