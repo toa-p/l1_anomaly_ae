@@ -15,16 +15,16 @@ def to_np_array(ak_array, maxN=100, pad=0):
 def store_objects(arrays, nentries, nobj=10, obj='jet'):
     '''store objects in zero-padded numpy arrays'''
     # in case some higher pT objects are lower in the list,
-    # get up to 2*nobj, then sort, then return nobj objects
-    two_nobj = 2*nobj
-    l1Obj_cyl = np.zeros((nentries, two_nobj, 3))
-    l1Obj_cart = np.zeros((nentries, two_nobj, 3))
-    l1Obj_iso = np.zeros((nentries, two_nobj))
-    l1Obj_dxy = np.zeros((nentries, two_nobj))
-    l1Obj_upt = np.zeros((nentries, two_nobj))
-    pt = to_np_array(arrays['{}Et'.format(obj)], maxN=two_nobj)
-    eta = to_np_array(arrays['{}Eta'.format(obj)], maxN=two_nobj)
-    phi = to_np_array(arrays['{}Phi'.format(obj)], maxN=two_nobj)
+    # get all maxobj, then sort, then return nobj objects
+    maxobj = ak.max(ak.num(arrays['{}Et'.format(obj)], axis=1))
+    l1Obj_cyl = np.zeros((nentries, maxobj, 3))
+    l1Obj_cart = np.zeros((nentries, maxobj, 3))
+    l1Obj_iso = np.zeros((nentries, maxobj))
+    l1Obj_dxy = np.zeros((nentries, maxobj))
+    l1Obj_upt = np.zeros((nentries, maxobj))
+    pt = to_np_array(arrays['{}Et'.format(obj)], maxN=maxobj)
+    eta = to_np_array(arrays['{}Eta'.format(obj)], maxN=maxobj)
+    phi = to_np_array(arrays['{}Phi'.format(obj)], maxN=maxobj)
     l1Obj_cyl[:,:,0] = pt
     l1Obj_cyl[:,:,1] = eta
     l1Obj_cyl[:,:,2] = phi
@@ -32,14 +32,14 @@ def store_objects(arrays, nentries, nobj=10, obj='jet'):
     l1Obj_cart[:,:,1] = pt*np.sin(phi)
     l1Obj_cart[:,:,2] = pt*np.sinh(eta)
     if obj in ['eg', 'muon']:
-        l1Obj_iso = to_np_array(arrays['{}Iso'.format(obj)], maxN=two_nobj)
+        l1Obj_iso = to_np_array(arrays['{}Iso'.format(obj)], maxN=maxobj)
     if obj == 'muon':
-        l1Obj_dxy = to_np_array(arrays['{}Dxy'.format(obj)], maxN=two_nobj)
-        l1Obj_upt = to_np_array(arrays['{}EtUnconstrained'.format(obj)], maxN=two_nobj)
+        l1Obj_dxy = to_np_array(arrays['{}Dxy'.format(obj)], maxN=maxobj)
+        l1Obj_upt = to_np_array(arrays['{}EtUnconstrained'.format(obj)], maxN=maxobj)
 
     # now sort in descending pT order if needed
     sort_indices = np.argsort(-pt, axis=1)
-    check_indices = np.tile(np.arange(0, two_nobj), (pt.shape[0], 1))
+    check_indices = np.tile(np.arange(0, maxobj), (pt.shape[0], 1))
     if not np.allclose(sort_indices, check_indices):
         l1Obj_cyl[:,:,0] = np.take_along_axis(l1Obj_cyl[:,:,0], sort_indices, axis=1)
         l1Obj_cyl[:,:,1] = np.take_along_axis(l1Obj_cyl[:,:,1], sort_indices, axis=1)
