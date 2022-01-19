@@ -2,236 +2,132 @@
 from __future__ import print_function, division
 import os
 import argparse
-import ROOT
+import uproot
+import awkward as ak
 import numpy as np
 import h5py
 import re
 
-def getBits(infile, uGTTreePath):
+def to_np_array(ak_array, maxN=100, pad=0):
+    '''convert awkward array to regular numpy array'''
+    return ak.fill_none(ak.pad_none(ak_array, maxN, clip=True, axis=-1), pad).to_numpy()
+
+def store_objects(arrays, nentries, nobj=10, obj='jet'):
+    '''store objects in zero-padded numpy arrays'''
+    # in case some higher pT objects are lower in the list,
+    # get up to 2*nobj, then sort, then return nobj objects
+    two_nobj = 2*nobj
+    l1Obj_cyl = np.zeros((nentries, two_nobj, 3))
+    l1Obj_cart = np.zeros((nentries, two_nobj, 3))
+    l1Obj_iso = np.zeros((nentries, two_nobj))
+    l1Obj_dxy = np.zeros((nentries, two_nobj))
+    l1Obj_upt = np.zeros((nentries, two_nobj))
+    pt = to_np_array(arrays['{}Et'.format(obj)], maxN=two_nobj)
+    eta = to_np_array(arrays['{}Eta'.format(obj)], maxN=two_nobj)
+    phi = to_np_array(arrays['{}Phi'.format(obj)], maxN=two_nobj)
+    l1Obj_cyl[:,:,0] = pt
+    l1Obj_cyl[:,:,1] = eta
+    l1Obj_cyl[:,:,2] = phi
+    l1Obj_cart[:,:,0] = pt*np.cos(phi)
+    l1Obj_cart[:,:,1] = pt*np.sin(phi)
+    l1Obj_cart[:,:,2] = pt*np.sinh(eta)
+    if obj in ['eg', 'muon']:
+        l1Obj_iso = to_np_array(arrays['{}Iso'.format(obj)], maxN=two_nobj)
+    if obj == 'muon':
+        l1Obj_dxy = to_np_array(arrays['{}Dxy'.format(obj)], maxN=two_nobj)
+        l1Obj_upt = to_np_array(arrays['{}EtUnconstrained'.format(obj)], maxN=two_nobj)
+
+    # now sort in descending pT order if needed
+    sort_indices = np.argsort(-pt, axis=1)
+    check_indices = np.tile(np.arange(0, two_nobj), (pt.shape[0], 1))
+    if not np.allclose(sort_indices, check_indices):
+        l1Obj_cyl[:,:,0] = np.take_along_axis(l1Obj_cyl[:,:,0], sort_indices, axis=1)
+        l1Obj_cyl[:,:,1] = np.take_along_axis(l1Obj_cyl[:,:,1], sort_indices, axis=1)
+        l1Obj_cyl[:,:,2] = np.take_along_axis(l1Obj_cyl[:,:,2], sort_indices, axis=1)
+        l1Obj_cart[:,:,0] = np.take_along_axis(l1Obj_cart[:,:,0], sort_indices, axis=1)
+        l1Obj_cart[:,:,1] = np.take_along_axis(l1Obj_cart[:,:,1], sort_indices, axis=1)
+        l1Obj_cart[:,:,2] = np.take_along_axis(l1Obj_cart[:,:,2], sort_indices, axis=1)
+        if obj in ['eg', 'muon']:
+            l1Obj_iso = np.take_along_axis(l1Obj_iso, sort_indices, axis=1)
+        if obj == 'muon':
+            l1Obj_dxy = np.take_along_axis(l1Obj_dxy, sort_indices, axis=1)
+            l1Obj_upt = np.take_along_axis(l1Obj_upt, sort_indices, axis=1)
+
+    return l1Obj_cyl[:,:nobj], l1Obj_cart[:,:nobj], l1Obj_iso[:,:nobj], l1Obj_dxy[:,:nobj], l1Obj_upt[:,:nobj]
+
+def getAlgoMap(input_file, uGTTreePath):
+    import ROOT
+    infile = ROOT.TFile.Open(input_file)
     fl1uGT = infile.Get(uGTTreePath)
     aliases = fl1uGT.GetListOfAliases()
+    titles = [alias.GetTitle() for alias in aliases]
+    names = [alias.GetName() for alias in aliases]
+    infile.Close()
     AlgoMap = {}
-    for alias in aliases:
-        matchbit = re.match(r"L1uGT\.m_algoDecisionInitial\[([0-9]+)\]", alias.GetTitle())
-        AlgoMap[alias.GetName()] = int(matchbit.group(1))
-        #print(alias.GetName(), alias.GetTitle(), matchbit.group(1))
+    for name, title, in zip(names, titles):
+        matchbit = re.match(r"L1uGT\.m_algoDecisionInitial\[([0-9]+)\]", title)
+        AlgoMap[name] = int(matchbit.group(1))
     return AlgoMap
 
 def filterAlgoMap(algoMap):
-    wanted_keys = []
     prescale_file_name = "Prescale_2022_v0_1_1.csv"
+    # [1] corresponds to algo name
+    # [4] corresponds to "2E+34"
     with open(prescale_file_name) as prescale_file:
-        for line in prescale_file:
-            values = line.split(',')
-            #values[4] corresponds to "2E+34"
-            if values[4] == "1":
-                wanted_keys.append(values[1])
-    filteredAlgoMap = {}
-    for seedname, bit in algoMap.iteritems():
-        if seedname in wanted_keys:
-            filteredAlgoMap[seedname] = bit
-    return filteredAlgoMap
+        wanted_keys = [line.split(',')[1] for line in prescale_file if line.split(',')[4] == "1"]
+    return {key: algoMap[key] for key in wanted_keys}
 
 def convert_to_h5(input_file, output_file, tree_name, uGT_tree_name):
+    inFile = uproot.open(input_file)
+    l1Tree = inFile[tree_name]
+    uGTTree = inFile[uGT_tree_name]
+    nentries = l1Tree.num_entries
 
+    bit_arrays = uGTTree.arrays(['m_algoDecisionInitial', 'm_algoDecisionFinal'], library='np')
+    initial_bits = np.stack(bit_arrays['m_algoDecisionInitial'], axis=0)
+    final_bits = np.stack(bit_arrays['m_algoDecisionFinal'], axis=0)
+
+    algo_map = getAlgoMap(input_file, uGT_tree_name)
+    algo_map = filterAlgoMap(algo_map)
+
+    seeds = {seedname: np.empty([nentries], dtype=bool) for seedname in algo_map.keys()}
+    for seedname, bit in algo_map.iteritems():
+        seeds[seedname][:] = final_bits[:,bit].astype(bool)
+    seeds["L1bit"] = np.logical_or.reduce([seeds[seedname] for seedname in algo_map.keys()]).astype(bool)
+
+    njets = 10
+    nmuons = 4
+    nelectrons = 4
     cylNames = ['pT', 'eta', 'phi']
     cartNames = ['px', 'py', 'pz']
-    l1Jet_cyl = np.array([])
-    l1Jet_cart = np.array([])
-    l1mu_cyl = np.array([])
-    l1mu_cart = np.array([])
-    l1mu_iso = np.array([])
-    l1mu_dxy = np.array([])
-    l1mu_upt = np.array([])
-    l1ele_cyl = np.array([])
-    l1ele_cart = np.array([])
-    l1ele_iso = np.array([])
-    l1sum_cyl = np.array([])
-    l1sum_cart = np.array([])
+    # variables to retrieve
+    varList = ['nSums', 'sumType', 'sumEt', 'sumPhi',
+               'jetEt', 'jetEta', 'jetPhi',
+               'muonEt', 'muonEta', 'muonPhi', 'muonIso', 'muonDxy', 'muonEtUnconstrained',
+               'egEt', 'egEta', 'egPhi', 'egIso']
 
-    inFile = ROOT.TFile.Open(input_file, 'r')
-    l1Tree = inFile.Get(tree_name)
-    uGTTree = inFile.Get(uGT_tree_name)
+    # get awkward arrays
+    arrays = l1Tree.arrays(varList)
 
-    seeds = {}
-    algo_map = filterAlgoMap(getBits(inFile, uGT_tree_name))
-    for seedname, bit in algo_map.iteritems():
-        seeds[seedname] = np.empty([l1Tree.GetEntries()])
-    seeds["L1bit"] = np.empty([l1Tree.GetEntries()])
+    # sums: store the following
+    # kTotalEt, kTotalEtEm, kTotalHt, kMissingEt, kMissingHt,
+    # with type 0, 16, 1, 2, 3
+    l1sum_cyl = np.zeros((nentries, 3))
+    l1sum_cart = np.zeros((nentries, 3))
+    sumEt = to_np_array(arrays['sumEt'], maxN=arrays['nSums'][0])
+    sumPhi = to_np_array(arrays['sumPhi'], maxN=arrays['nSums'][0])
+    sumType = to_np_array(arrays['sumType'], maxN=arrays['nSums'][0])
+    # index of sum to save (MET)
+    metindex = np.where(sumType == 2)
+    l1sum_cyl[:,0] = sumEt[metindex] # MET_pt
+    l1sum_cyl[:,2] = sumPhi[metindex] # MET_phi
+    l1sum_cart[:,0] = sumEt[metindex]*np.cos(sumPhi[metindex]) # MET_px
+    l1sum_cart[:,1] = sumEt[metindex]*np.sin(sumPhi[metindex]) # MET_py
 
-    for i in range(l1Tree.GetEntries()):
-        l1Tree.GetEntry(i)
-        uGTTree.GetEntry(i)
-        evt = l1Tree.L1Upgrade
-        uGTevt = uGTTree.L1uGT
-
-        for seedname, bit in algo_map.iteritems():
-            seeds[seedname][i] = uGTevt.getAlgoDecisionFinal(bit)
-            seeds["L1bit"][i] = (seeds["L1bit"][i] or seeds[seedname][i]).astype(int)
-
-        # sums: store the following
-        # kTotalEt, kTotalEtEm, kTotalHt, kMissingEt, kMissingHt,
-        # with type 0, 16, 1, 2, 3
-        sums_cyl = np.zeros((1,3))
-        sums_cart = np.zeros((1,3))
-        for i in range(evt.nSums):
-            if evt.sumType[i] == 2:
-                met = ROOT.TLorentzVector()
-                met.SetPtEtaPhiM(evt.sumEt[i], 0., evt.sumPhi[i], 0.)
-                sums_cyl[0,0] = met.Pt()
-                sums_cyl[0,1] = 0
-                sums_cyl[0,2] = met.Phi()
-                sums_cart[0,0] = met.Px()
-                sums_cart[0,1] = met.Py()
-                sums_cart[0,2] = 0
-                l1sum_cyl = np.concatenate((l1sum_cyl, sums_cyl), axis=0) if l1sum_cyl.size else sums_cyl
-                l1sum_cart = np.concatenate((l1sum_cart, sums_cart), axis=0) if l1sum_cart.size else sums_cart
-
-        l1jetArray = np.array([])
-        for j in range(evt.nJets):
-            myL1Jet = ROOT.TLorentzVector()
-            myL1Jet.SetPtEtaPhiM(evt.jetEt[j], evt.jetEta[j], evt.jetPhi[j], 0.)
-            # prepare arrays
-            my_l1Jet = np.array([myL1Jet.Pt(), myL1Jet.Eta(), myL1Jet.Phi(),
-                                 myL1Jet.Px(),myL1Jet.Py(),myL1Jet.Pz()])
-            my_l1Jet = np.reshape(my_l1Jet, (1,my_l1Jet.shape[0]))
-            # append info to arrays
-            l1jetArray = np.concatenate([l1jetArray, my_l1Jet], axis=0) if l1jetArray.size else my_l1Jet
-        missing = 10 - l1jetArray.shape[0]
-        if missing > 0:
-            zeros = np.zeros([missing, len(cylNames)+len(cartNames)])
-            if not l1jetArray.size:
-                l1jetArray = zeros
-            else:
-                l1jetArray = np.concatenate([l1jetArray, zeros], axis=0)
-        # now sort jets in descending pT order
-        l1jetArray = l1jetArray[l1jetArray[:,0].argsort()]
-        l1jetArray = l1jetArray[::-1]
-        l1jetArray = l1jetArray[:10,:]
-        my_l1Jet_cyl = l1jetArray[:,:len(cylNames)]
-        my_l1Jet_cyl = np.reshape(my_l1Jet_cyl, [1,10,len(cylNames)])
-        my_l1Jet_cart = l1jetArray[:,len(cylNames):]
-        my_l1Jet_cart = np.reshape(my_l1Jet_cart, [1,10,len(cartNames)])
-        if l1Jet_cyl.shape[0] == 0:
-            l1Jet_cyl = my_l1Jet_cyl
-        else:
-            l1Jet_cyl = np.concatenate([l1Jet_cyl, my_l1Jet_cyl], axis=0)
-        if l1Jet_cart.shape[0] == 0:
-            l1Jet_cart = my_l1Jet_cart
-        else:
-            l1Jet_cart = np.concatenate([l1Jet_cart, my_l1Jet_cart], axis=0)
-
-        l1muonArray = np.array([])
-        l1muonIso   = np.array([])
-        l1muonDxy   = np.array([])
-        l1muonUpt   = np.array([])
-        for j in range(evt.nMuons):
-            myL1muon = ROOT.TLorentzVector()
-            myL1muon.SetPtEtaPhiM(evt.muonEt[j], evt.muonEta[j], evt.muonPhi[j], 0.)
-            my_l1mu =  np.array([myL1muon.Pt(), myL1muon.Eta(), myL1muon.Phi(),
-                                 myL1muon.Px(),myL1muon.Py(),myL1muon.Pz()])
-            my_l1mu = np.reshape(my_l1mu, (1, my_l1mu.shape[0]))
-            # append info to arrays
-            l1muonArray = np.concatenate([l1muonArray, my_l1mu], axis=0) if l1muonArray.size else my_l1mu
-            l1muonIso = np.append(l1muonIso, [evt.muonIso[j]])
-            l1muonDxy = np.append(l1muonDxy, [evt.muonDxy[j]])
-            l1muonUpt = np.append(l1muonUpt, [evt.muonEtUnconstrained[j]])
-        missing = 4-l1muonArray.shape[0]
-        if missing > 0:
-            zeros = np.zeros([missing, len(cylNames)+len(cartNames)])
-            zeros_1d = np.zeros(missing)
-            if not l1muonArray.size:
-                l1muonArray = zeros
-                l1muonIso = zeros_1d
-                l1muonDxy = zeros_1d
-                l1muonUpt = zeros_1d
-            else:
-                l1muonArray = np.concatenate([l1muonArray, zeros], axis=0)
-                l1muonIso = np.concatenate([l1muonIso, zeros_1d], axis=0)
-                l1muonDxy = np.concatenate([l1muonDxy, zeros_1d], axis=0)
-                l1muonUpt = np.concatenate([l1muonUpt, zeros_1d], axis=0)
-        l1muonArray = l1muonArray[l1muonArray[:,0].argsort()]
-        l1muonArray = l1muonArray[::-1]
-        l1muonArray =l1muonArray[:4,:]
-        my_l1mu_cyl = l1muonArray[:,:len(cylNames)]
-        my_l1mu_cyl= np.reshape(my_l1mu_cyl, [1,4,len(cylNames)])
-        my_l1mu_cart = l1muonArray[:,len(cylNames):]
-        my_l1mu_cart = np.reshape(my_l1mu_cart, [1,4,len(cartNames)])
-        l1muonIso = l1muonIso[l1muonArray[:,0].argsort()]
-        l1muonIso = l1muonIso[:4]
-        l1muonIso = np.reshape(l1muonIso, [1,4])
-        l1muonDxy = l1muonDxy[l1muonArray[:,0].argsort()]
-        l1muonDxy = l1muonDxy[:4]
-        l1muonDxy = np.reshape(l1muonDxy, [1,4])
-        l1muonUpt = l1muonUpt[l1muonArray[:,0].argsort()]
-        l1muonUpt = l1muonUpt[:4]
-        l1muonUpt = np.reshape(l1muonUpt, [1,4])
-        if l1mu_cyl.shape[0] == 0:
-            l1mu_cyl = my_l1mu_cyl
-        else:
-            l1mu_cyl = np.concatenate([l1mu_cyl, my_l1mu_cyl], axis=0)
-        if l1mu_cart.shape[0]  == 0:
-            l1mu_cart = my_l1mu_cart
-        else:
-            l1mu_cart = np.concatenate([l1mu_cart, my_l1mu_cart], axis=0)
-        if l1mu_iso.shape[0] == 0:
-            l1mu_iso = l1muonIso
-        else:
-            l1mu_iso = np.concatenate([l1mu_iso, l1muonIso], axis=0)
-        if l1mu_dxy.shape[0] == 0:
-            l1mu_dxy = l1muonDxy
-        else:
-            l1mu_dxy = np.concatenate([l1mu_dxy, l1muonDxy], axis=0)
-        if l1mu_upt.shape[0] == 0:
-            l1mu_upt = l1muonUpt
-        else:
-            l1mu_upt = np.concatenate([l1mu_upt, l1muonUpt], axis=0)
-
-        l1eleArray = np.array([])
-        l1eleIso   = np.array([])
-        for j in range(evt.nEGs):
-            myL1ele = ROOT.TLorentzVector()
-            myL1ele.SetPtEtaPhiM(evt.egEt[j], evt.egEta[j], evt.egPhi[j], 0.)
-            my_l1ele =  np.array([myL1ele.Pt(), myL1ele.Eta(), myL1ele.Phi(),
-                                 myL1ele.Px(),myL1ele.Py(),myL1ele.Pz()])
-            my_l1ele = np.reshape(my_l1ele, (1, my_l1ele.shape[0]))
-            # append info to arrays
-            l1eleArray = np.concatenate([l1eleArray, my_l1ele], axis=0) if l1eleArray.shape[0] > 0 else my_l1ele
-            l1eleIso = np.append(l1eleIso, [evt.egIso[j]])
-        missing = 4-l1eleArray.shape[0]
-        if missing > 0:
-            zeros = np.zeros([missing, len(cylNames)+len(cartNames)])
-            zeros_1d = np.zeros(missing)
-            if not l1eleArray.size:
-                l1eleArray = zeros
-                l1eleIso = zeros_1d
-            else:
-                l1eleArray = np.concatenate([l1eleArray, zeros], axis=0)
-                l1eleIso = np.concatenate([l1eleIso, zeros_1d], axis=0)
-        l1eleArray = l1eleArray[l1eleArray[:,0].argsort()]
-        l1eleArray = l1eleArray[::-1]
-        l1eleArray = l1eleArray[:4,:]
-        my_l1ele_cyl = l1eleArray[:,:len(cylNames)]
-        my_l1ele_cyl = np.reshape(my_l1ele_cyl, [1,4,len(cylNames)])
-        my_l1ele_cart = l1eleArray[:,len(cylNames):]
-        my_l1ele_cart= np.reshape(my_l1ele_cart, [1,4,len(cartNames)])
-        l1eleIso = l1eleIso[l1eleArray[:,0].argsort()]
-        l1eleIso = l1eleIso[:4]
-        l1eleIso = np.reshape(l1eleIso, [1,4])
-        if  l1ele_cyl.shape[0] == 0:
-            l1ele_cyl = my_l1ele_cyl
-        else:
-            l1ele_cyl = np.concatenate([l1ele_cyl, my_l1ele_cyl], axis=0)
-        if l1ele_cart.shape[0] == 0:
-            l1ele_cart = my_l1ele_cart
-        else:
-            l1ele_cart = np.concatenate([l1ele_cart, my_l1ele_cart], axis=0)
-        if l1ele_iso.shape[0] == 0:
-            l1ele_iso = l1eleIso
-        else:
-            l1ele_iso = np.concatenate([l1ele_iso, l1eleIso], axis=0)
-
-    inFile.Close()
+    # store objects: jets, muons, electrons
+    l1Jet_cyl, l1Jet_cart, _, _, _ = store_objects(arrays, nentries, nobj=njets, obj='jet')
+    l1mu_cyl, l1mu_cart, l1mu_iso, l1mu_dxy, l1mu_upt = store_objects(arrays, nentries, nobj=nmuons, obj='muon')
+    l1ele_cyl, l1ele_cart, l1ele_iso, _, _ = store_objects(arrays, nentries, nobj=nelectrons, obj='eg')
 
     outFile = h5py.File(output_file, 'w')
     outFile.create_dataset('FeatureNames_cyl', data=cylNames, compression='gzip')
@@ -246,10 +142,10 @@ def convert_to_h5(input_file, output_file, tree_name, uGT_tree_name):
     outFile.create_dataset('l1Ele_cyl', data=l1ele_cyl, compression='gzip')
     outFile.create_dataset('l1Ele_cart', data=l1ele_cart, compression='gzip')
     outFile.create_dataset('l1Ele_Iso', data=l1ele_iso, compression='gzip')
-    outFile.create_dataset('l1Sum_cyl', data = l1sum_cyl, compression='gzip')
-    outFile.create_dataset('l1Sum_cart', data = l1sum_cart, compression='gzip')
+    outFile.create_dataset('l1Sum_cyl', data=l1sum_cyl, compression='gzip')
+    outFile.create_dataset('l1Sum_cart', data=l1sum_cart, compression='gzip')
     for seed, values in seeds.iteritems():
-        outFile.create_dataset(seed, data = values, compression='gzip')
+        outFile.create_dataset(seed, data=values, compression='gzip')
     outFile.close()
 
 if __name__ == '__main__':
