@@ -10,18 +10,18 @@ import re
 
 def to_np_array(ak_array, maxN=100, pad=0):
     '''convert awkward array to regular numpy array'''
-    return ak.fill_none(ak.pad_none(ak_array, maxN, clip=True, axis=-1), pad).to_numpy()
+    return ak.fill_none(ak.pad_none(ak_array, maxN, clip=True, axis=-1), pad).to_numpy().astype('float16')
 
 def store_objects(arrays, nentries, nobj=10, obj='jet'):
     '''store objects in zero-padded numpy arrays'''
     # in case some higher pT objects are lower in the list,
     # get all maxobj, then sort, then return nobj objects
     maxobj = ak.max(ak.num(arrays['{}Et'.format(obj)], axis=1))
-    l1Obj_cyl = np.zeros((nentries, maxobj, 3))
-    l1Obj_cart = np.zeros((nentries, maxobj, 3))
-    l1Obj_iso = np.zeros((nentries, maxobj))
-    l1Obj_dxy = np.zeros((nentries, maxobj))
-    l1Obj_upt = np.zeros((nentries, maxobj))
+    l1Obj_cyl = np.zeros((nentries, maxobj, 3),dtype='float16')
+    l1Obj_cart = np.zeros((nentries, maxobj, 3),dtype='float16')
+    l1Obj_iso = np.zeros((nentries, maxobj),dtype='float16')
+    l1Obj_dxy = np.zeros((nentries, maxobj),dtype='float16')
+    l1Obj_upt = np.zeros((nentries, maxobj),dtype='float16')
     pt = to_np_array(arrays['{}Et'.format(obj)], maxN=maxobj)
     eta = to_np_array(arrays['{}Eta'.format(obj)], maxN=maxobj)
     phi = to_np_array(arrays['{}Phi'.format(obj)], maxN=maxobj)
@@ -112,8 +112,8 @@ def convert_to_h5(input_file, output_file, tree_name, uGT_tree_name):
     # sums: store the following
     # kTotalEt, kTotalEtEm, kTotalHt, kMissingEt, kMissingHt,
     # with type 0, 16, 1, 2, 3
-    l1sum_cyl = np.zeros((nentries, 3))
-    l1sum_cart = np.zeros((nentries, 3))
+    l1sum_cyl = np.zeros((nentries, 3),dtype='float16')
+    l1sum_cart = np.zeros((nentries, 3),dtype='float16')
     sumEt = to_np_array(arrays['sumEt'], maxN=arrays['nSums'][0])
     sumPhi = to_np_array(arrays['sumPhi'], maxN=arrays['nSums'][0])
     sumType = to_np_array(arrays['sumType'], maxN=arrays['nSums'][0])
