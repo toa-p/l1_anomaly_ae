@@ -6,15 +6,17 @@ from sklearn.preprocessing import StandardScaler
 import pickle
 
 def prepare_data(input_file, input_bsm, events, output_file):
+
     # read QCD data
-    h5f = h5py.File(input_file, 'r')
-    full_data = h5f['full_data_cyl'][:]
-    h5f.close()
+    with h5py.File(input_file, 'r') as h5f:
+        full_data = h5f['full_data_cyl'][:events,:,:]
+	
     # fit scaler to the full data
     pt_scaler = StandardScaler()
     data_target = np.copy(full_data)
     data_target[:,:,0] = pt_scaler.fit_transform(data_target[:,:,0])
     data_target[:,:,0] = np.multiply(data_target[:,:,0], np.not_equal(full_data[:,:,0],0))
+    
     # define training, test and validation datasets
     X_train, X_test, Y_train, Y_test = train_test_split(full_data, data_target, test_size=0.5, shuffle=True)
     del full_data, data_target

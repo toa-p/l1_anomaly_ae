@@ -36,6 +36,8 @@ pip install tensorflow
 pip install tensorflow_model_optimization
 pip install setGPU
 pip install matplotlib
+pip install pandas
+pip install neptune-contrib
 ```
 
 Install QKeras in the same or another folders:
@@ -164,3 +166,32 @@ python plot.py --coord cyl --model vae --loss-type mse_kl --output-dir ./ --inpu
 ```
 
 Several loss types can be set and type of features. Change all other options as needed.
+
+### Train and evaluate DNN models:
+
+#### Prepare the data
+
+Input data must be prepared with ```data_preprocessing.py```, which accepts as inputs preprocessed QCD and/or preprocessed BSM h5 files and outputs a pickle file with train/test events split to be used downstream for the train and evaluation steps. For example: 
+
+```
+python data_preprocessing.py --input-file QCD_preprocessed.h5 --input-bsm BSM_preprocessed.h5 --output-file data.pickle --events -1
+```
+
+#### Training 
+
+The training program requires the input of the latent dimension, filenames for the output model (h5 and json), the training data pickle file, the history, but also the batch size, and the number of epochs. For example: 
+
+```
+python train_AE.py --model-type AE --input-data data.pickle --output-model-h5 output_model.h5 --output-model-json output_model.json --output-history history.h5 --batch-size 1024 --n-epochs 150 --latent-dim 3
+```
+
+#### Performance evaluation
+
+First prepare file with predictions for the QCD test sample and BSM samples:
+
+```
+python evaluate.py --input-h5 output_model.h5 --input-json output_model.json --input-file data.pickle --output-result results.h5
+```
+
+Make ROC curves
+
