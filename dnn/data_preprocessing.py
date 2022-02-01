@@ -31,12 +31,6 @@ def prepare_data(input_file, input_bsm, events, output_file):
     X_train, X_test, Y_train, Y_test = train_test_split(data, data_target, test_size=0.5)
     del data, data_target
     
-    print(X_test.shape)
-    print(X_test[:,1:2])
-    #print(Y_test[:,19:20])
-    import sys
-    sys.exit()
-    
     # read BSM data
     bsm_data = []
     
