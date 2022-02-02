@@ -190,8 +190,12 @@ python train_AE.py --model-type AE --input-data data.pickle --output-model-h5 ou
 First prepare file with predictions for the QCD test sample and BSM samples:
 
 ```
-python evaluate.py --input-h5 output_model.h5 --input-json output_model.json --input-file data.pickle --output-result results.h5
+python evaluate.py --input-h5 output_model.h5 --input-json output_model.json --input-file data.pickle --output-result results.h5 --input-history history.h5
 ```
 
-Make ROC curves
+Make ROC curves and other debugging plots (input vs reconstructed features, history, loss distributions)
+
+```
+python plot_baseline.py --results results.h5 --output-dir plots
+```
 
