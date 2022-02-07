@@ -1,0 +1,15 @@
+name: l1ad
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python
+  - numpy
+  - h5py
+  - pandas
+  - uproot
+  - jupyterlab
+  - matplotlib
+  - scikit-learn
+  - pip
+  - mplhep
