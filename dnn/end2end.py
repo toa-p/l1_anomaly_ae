@@ -104,10 +104,10 @@ def run_all(input_qcd='',input_bsm='',events=10000,load_pickle=False,input_pickl
 
     print("Training the model")
 
-    history = model.fit(X_train_scaled, X_train_scaled,
+    history = model.fit(X_train_flatten, X_train_scaled,
                         epochs=n_epochs,
                         batch_size=batch_size,
-                        validation_data=(X_test_scaled, X_test_scaled),
+                        validation_split=0.2,
                         callbacks=callbacks)
 
     if(output_model_h5!=''):
