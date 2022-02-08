@@ -143,14 +143,29 @@ def run_all(input_qcd='',input_bsm='',events=10000,load_pickle=False,input_pickl
     # Evaluate the model
     print("Evaluating the model")
     loss = make_mse_loss_numpy
-    qcd_prediction = model.autoencoder(X_test_scaled).numpy()
+    if(model_type=='AE'): 
+        qcd_prediction = model.autoencoder(X_test_scaled).numpy()
+    elif(model_type=='VAE'):
+        mean_pred, logvar_pred, z_pred = model.encoder(bsm_data[i])
+        bsm_prediction = decoder(z_pred)
+
+    
+
     results={}
     min_loss,max_loss=1e5,0
     for i, label in enumerate(bsm_labels):
         results[label] = {}
-        bsm_pred = model.autoencoder(bsm_data[i]).numpy()
+        if(model_type='AE'): 
+            bsm_pred = model.autoencoder(bsm_data[i]).numpy()
+        elif(model_type='VAE'): 
+            mean_pred, logvar_pred, z_pred = model.encoder(bsm_data[i])
+            bsm_prediction = decoder(z_pred)
         results[label]['target'] = bsm_target[i]
         results[label]['prediction'] = bsm_pred
+        if(model_type='VAE'):
+            results[label]['mean_prediction'] = mean_pred
+            results[label]['logvar_prediction'] = logvar_pred
+            results[label]['z_prediction'] = z_pred
         total_loss = return_total_loss(loss, bsm_target[i], bsm_pred)
         if(np.min(total_loss)<min_loss): min_loss = np.min(total_loss)
         if(np.max(total_loss)>max_loss): max_loss = np.max(total_loss)
