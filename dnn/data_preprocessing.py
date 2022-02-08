@@ -68,15 +68,16 @@ def prepare_data(input_file, input_bsm, events, output_file,retun_data):
     
     data = [X_train, Y_train, X_test, Y_test, bsm_data, bsm_scaled_data, pt_scaler]
 
-    with open(output_file, 'wb') as handle: 
-        pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        print("Wrote data to a pickle file")
-    
     if(retun_data):
         print("reutrned data")
         return X_train, Y_train, X_test, Y_test, bsm_data, bsm_scaled_data, pt_scaler, bsm_labels
+
+    if(output_file!=''):
+        with open(output_file, 'wb') as handle: 
+            pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            print("Wrote data to a pickle file")
     
-    else: return
+
 	
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -84,6 +85,6 @@ if __name__ == '__main__':
     parser.add_argument('--input-bsm', type=str, help='Input file for generated BSM')
     parser.add_argument('--events', type=int, default=-1, help='How many events to proceed')
     parser.add_argument('--output-file', type=str, help='output file', required=True)
-    parser.add_argument('--return-data', type=str, help='output file', required=False)
+    parser.add_argument('--return-data', type=bool, help='Return the data',default=False, required=False)
     args = parser.parse_args()
     prepare_data(**vars(args))

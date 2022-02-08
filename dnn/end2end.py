@@ -7,7 +7,6 @@ from sklearn.model_selection import train_test_split
 import joblib
 import pickle
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
-from functions import prepare_data
 import tensorflow as tf
 import sys
 
@@ -24,8 +23,12 @@ import os
 import pathlib
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import mplhep as hep
-hep.style.use(hep.style.ROOT)
+try:
+    import mplhep as hep
+    hep.style.use(hep.style.ROOT)
+    print("Using MPL HEP for ROOT style formating")
+except:
+    print("Instal MPL HEP for style formating")
 mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=["#DB4437", "#4285F4", "#F4B400", "#0F9D58", "purple", "goldenrod", "peru", "coral","turquoise",'gray','navy','m','darkgreen','fuchsia','steelblue']) 
 from autoencoder_classes import AE
 
@@ -48,13 +51,8 @@ def return_total_loss(loss, bsm_t, bsm_pred):
     return total_loss
 
 
-def run_all(input_qcd='',input_bsm='',events,output_file='',retun_data=False,load_pickle=False,input_pickle='',output_pfile='',model_type='AE',latent_dim,output_model_h5='',output_model_json='',output_history='',batch_size= 1024,n_epochs = 20,output_result='',tag=''):
+def run_all(input_qcd='',input_bsm='',events=10000,load_pickle=False,input_pickle='',output_pfile='',model_type='AE',latent_dim=3,output_model_h5='',output_model_json='',output_history='',batch_size= 1024,n_epochs = 20,output_result='',tag=''):
 
-    if(!load_pickle):
-        if(input_qcd==''or input_bsm==''):
-            print('Please provide input H5 files')
-            return
-        X_train_flatten, X_train_scaled, X_test_flatten, X_test_scaled, bsm_data, bsm_target, pt_scaler, bsm_labels = prepare_data(input_file, input_bsm, events, output_file,retun_data)
     if(load_pickle):
         if(input_pickle==''):
             print('Please provide input pickle files')
@@ -76,9 +74,14 @@ def run_all(input_qcd='',input_bsm='',events,output_file='',retun_data=False,loa
                   'HTo2LongLivedTo4mu_125_50',
                   'VBFHToTauTau',
                   'VBF_HH']
+    else:
+        if(input_qcd==''or input_bsm==''):
+            print('Please provide input H5 files')
+            return
+        X_train_flatten, X_train_scaled, X_test_flatten, X_test_scaled, bsm_data, bsm_target, pt_scaler, bsm_labels = prepare_data(input_qcd, input_bsm, events, '',True)
     
     if(model_type=='AE'):
-        model = build_AE(X_train_flatten.shape[-1],latent_dim)
+        autoencoder = build_AE(X_train_flatten.shape[-1],latent_dim)
         model = AE(autoencoder)
         model.compile(optimizer=keras.optimizers.Adam(lr=0.001))
 
@@ -89,7 +92,7 @@ def run_all(input_qcd='',input_bsm='',events,output_file='',retun_data=False,loa
         callbacks.append(tf.keras.callbacks.EarlyStopping(monitor='val_loss',verbose=1, patience=10, restore_best_weights=True))
     
     elif(model_type=='VAE'):
-        model = build_VAE(X_train_flatten.shape[-1],latent_dim)
+        encoder, decoder = build_VAE(X_train_flatten.shape[-1],latent_dim)
         model = VAE(encoder, decoder)
         model.compile(optimizer=keras.optimizers.Adam())
 
@@ -120,7 +123,7 @@ def run_all(input_qcd='',input_bsm='',events,output_file='',retun_data=False,loa
         print("Saved history to disk")
     
     if(output_pfile!=''):
-        with open(output_file, 'wb') as f:
+        with open(output_pfile, 'wb') as f:
             pickle.dump([X_train_flatten, X_train_scaled, X_test_flatten, X_test_scaled, bsm_data, bsm_target, pt_scaler, bsm_labels], f)
         print("Saved Pickle data to disk")
 
@@ -205,7 +208,37 @@ def run_all(input_qcd='',input_bsm='',events,output_file='',retun_data=False,loa
     plt.plot(np.linspace(0, 1),np.linspace(0, 1), '--', color='0.75')
     plt.axvline(0.00001, color='red', linestyle='dashed', linewidth=1)
     plt.title('ROC curve '+model_type)
+    plt.xscale('log')
+    plt.yscale('log')
     plt.savefig('roc_curve_'+model_type+'_'+tag+'.pdf')
+    # plt.show()
+
+    return 
+
+if __name__ == '__main__':
+    #(input_qcd='',input_bsm='',events,load_pickle=False,input_pickle='',output_pfile='',model_type='AE',latent_dim,output_model_h5='',output_model_json='',output_history='',batch_size= 1024,n_epochs = 20,output_result='',tag='')
+    parser=argparse.ArgumentParser(description='Train aand test model')
+    parser.add_argument('--input_qcd', type=str, default='', help='Input QCD file')
+    parser.add_argument('--input_bsm', type=str, default='', help='Input BSM file')
+    parser.add_argument('--events', type=int, default=0, help='Number of events to process')
+    parser.add_argument('--load_pickle', type=bool, default=False, help='Load Directly from Pickle file')
+    parser.add_argument('--input_pickle', type=str, default='', help='Input Pickle file')
+    parser.add_argument('--output_pfile', type=str, default='', help='Output Pickle file')
+    parser.add_argument('--model_type', type=str, default='AE',choices=['AE','VAE'], help='Model type')
+    parser.add_argument('--latent_dim', type=int, default=3, help='Latent dimension')
+    parser.add_argument('--output_model_h5', type=str, default='', help='Output model h5 file')
+    parser.add_argument('--output_model_json', type=str, default='', help='Output model json file')
+    parser.add_argument('--output_history', type=str, default='', help='Output history file')
+    parser.add_argument('--batch_size', type=int, default=1024, help='Batch size')
+    parser.add_argument('--n_epochs', type=int, default=150, help='Number of epochs')
+    parser.add_argument('--output_result', type=str, default='', help='Output result file')
+    parser.add_argument('--tag', type=str, default='', help='Tag for output files')
+    args=parser.parse_args()
+    run_all(args.input_qcd,args.input_bsm,args.events,args.load_pickle,args.input_pickle,args.output_pfile,args.model_type,args.latent_dim,args.output_model_h5,args.output_model_json,args.output_history,args.batch_size,args.n_epochs,args.output_result,args.tag)
+
+
+
+
 
 
 
