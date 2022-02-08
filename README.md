@@ -21,31 +21,17 @@ cd l1_anomaly_ae
 Setup the conda environment
 
 ```
-conda create --name l1ad --file env.txt
+conda env create -f l1ad.yml
 conda activate l1ad
 ```
 
-**NB: the cudnn version in the env.txt might be incompatible with your cuda version. Check [here](https://repo.anaconda.com/pkgs/main/linux-64/) for different versions.**
+**NB: the cudnn version in the l1ad.yml might be incompatible with your cuda version. Check [here](https://repo.anaconda.com/pkgs/main/linux-64/) for different versions.**
 
-Install some additional packages:
-
-```
-pip install h5py
-pip install uproot
-pip install tensorflow
-pip install tensorflow_model_optimization
-pip install setGPU
-pip install matplotlib
-pip install pandas
-pip install neptune-contrib
-```
 
 Install QKeras in the same or another folders:
 
 ```
-git clone https://github.com/google/qkeras.git
-cd qkeras
-python setup.py install
+ pip install git+git://github.com/google/qkeras.git
 ```
 
 Activate the environment (nb, every time you login):
@@ -168,6 +154,16 @@ python plot.py --coord cyl --model vae --loss-type mse_kl --output-dir ./ --inpu
 Several loss types can be set and type of features. Change all other options as needed.
 
 ### Train and evaluate DNN models:
+
+#### End to End for DNN
+
+For DNN once we have ```.h5``` Files, you can run the entire chain using the script ```end2end.py```, this scrip has various handles to output data at preliminary stages. To run it, just use
+
+```
+python end2end.py --input_qcd /eos/uscms/store/group/lpctrig/jngadiub/L1TNtupleRun3-h5-extended/QCD_preprocessed.h5 --input_bsm /eos/uscms/store/group/lpctrig/jngadiub/L1TNtupleRun3-h5-extended/BSM_preprocessed.h5 --events 10000 --output_pfile data.pickle --model_type AE --latent_dim 3 --output_model_h5 model.h5 --output_model_json model.json --output_history history.h5 --batch_size 1024 --n_epochs 150 --output_result results.h5 --tag test
+```
+
+This Script is also avilable for an interactive run in ```end2end_demo.ipynb```. If incase only individual parts of the code are to be run, use the subsequent steps.
 
 #### Prepare the data
 
