@@ -35,12 +35,14 @@ from autoencoder_classes import AE,VAE
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, TerminateOnNaN
 from neptunecontrib.monitoring.keras import NeptuneMonitor
 from losses import mse_split_loss, radius, kl_loss
-from functions import make_mse_loss_numpy
+from functions import make_mse_loss_numpy, save_model
 from sklearn.metrics import roc_curve, auc
 
 
 from data_preprocessing import prepare_data
-from model import build_AE, build_VAE
+from model import build_AE, build_VAE, build_QVAE
+import tensorflow_model_optimization as tfmot
+tsk = tfmot.sparsity.keras
 
 
 
@@ -52,7 +54,7 @@ def return_total_loss(loss, bsm_t, bsm_pred):
 
 
 
-def run_all(input_qcd='',input_bsm='',events=10000,load_pickle=False,input_pickle='',output_pfile='',model_type='AE',latent_dim=3,output_model_h5='',output_model_json='',output_history='',batch_size= 1024,n_epochs = 20,output_result='',tag=''):
+def run_all(input_qcd='',input_bsm='',events=10000,load_pickle=False,input_pickle='',output_pfile='',model_type='AE',quantize=False,latent_dim=3,output_model_h5='',output_model_json='',output_history='',batch_size= 1024,n_epochs = 20,output_result='',tag=''):
 
     if(load_pickle):
         if(input_pickle==''):
@@ -91,22 +93,23 @@ def run_all(input_qcd='',input_bsm='',events=10000,load_pickle=False,input_pickl
         model = AE(autoencoder)
         model.compile(optimizer=keras.optimizers.Adam(lr=0.001))
 
-        callbacks=[]
-        callbacks.append(ReduceLROnPlateau(monitor='val_loss',  factor=0.1, patience=2, verbose=1, mode='auto', min_delta=0.0001, cooldown=2, min_lr=1E-6))
-        callbacks.append(TerminateOnNaN())
-        callbacks.append(NeptuneMonitor())
-        callbacks.append(tf.keras.callbacks.EarlyStopping(monitor='val_loss',verbose=1, patience=10, restore_best_weights=True))
-    
     elif(model_type=='VAE'):
-        encoder, decoder = build_VAE(X_train_flatten.shape[-1],latent_dim)
+        if(quantize):
+            encoder, decoder = build_QVAE(X_train_flatten.shape[-1],latent_dim)
+        else:
+            encoder, decoder = build_VAE(X_train_flatten.shape[-1],latent_dim)
         model = VAE(encoder, decoder)
         model.compile(optimizer=keras.optimizers.Adam())
 
-        callbacks=[]
-        callbacks.append(ReduceLROnPlateau(monitor='val_loss',  factor=0.1, patience=2, verbose=1, mode='auto', min_delta=0.0001, cooldown=2, min_lr=1E-6))
-        callbacks.append(TerminateOnNaN())
-        callbacks.append(NeptuneMonitor())
-        callbacks.append(tf.keras.callbacks.EarlyStopping(monitor='val_loss',verbose=1, patience=10, restore_best_weights=True))
+    callbacks=[]
+    callbacks.append(ReduceLROnPlateau(monitor='val_loss',  factor=0.1, patience=2, verbose=1, mode='auto', min_delta=0.0001, cooldown=2, min_lr=1E-6))
+    callbacks.append(TerminateOnNaN())
+    callbacks.append(NeptuneMonitor())
+    callbacks.append(tf.keras.callbacks.EarlyStopping(monitor='val_loss',verbose=1, patience=10, restore_best_weights=True))
+    
+    if(quantize):
+        callbacks.append(tfmot.sparsity.keras.UpdatePruningStep())
+
 
     print("Training the model")
 
@@ -118,7 +121,29 @@ def run_all(input_qcd='',input_bsm='',events=10000,load_pickle=False,input_pickl
 
     if(output_model_h5!=''):
         if(model_type=='VAE'):
-            model.save(os.path.join(os.getcwd(),output_model_h5.split('.')[0]))
+            if(quantize):
+                final_encoder = tfmot.sparsity.keras.strip_pruning(model.encoder)
+                final_encoder.summary()
+                final_decoder = tfmot.sparsity.keras.strip_pruning(model.decoder)
+                final_decoder.summary()
+                save_model(output_model_h5.split('.')[0]+'_QVAE_Encoder',final_encoder)
+                save_model(output_model_h5.split('.')[0]+'_QVAE_Decoder',final_decoder)
+
+                for layer in final_encoder.layers:
+                    if hasattr(layer, "kernel_quantizer"):
+                        print(layer.name, "kernel:", str(layer.kernel_quantizer_internal), "bias:", str(layer.bias_quantizer_internal))
+                    elif hasattr(layer, "quantizer"):
+                        print(layer.name, "quantizer:", str(layer.quantizer))
+
+                for i, w in enumerate(final_encoder.get_weights()):
+                    print(
+                        "{} -- Total:{}, Zeros: {:.2f}%".format(
+                            final_encoder.weights[i].name, w.size, np.sum(w == 0) / w.size * 100
+                        )
+                    )
+                                                
+            else:    
+                model.save(os.path.join(os.getcwd(),output_model_h5.split('.')[0]))
         else:
             model_json = autoencoder.to_json()
             with open(output_model_json, 'w') as json_file:
@@ -378,6 +403,7 @@ if __name__ == '__main__':
     parser.add_argument('--input_pickle', type=str, default='', help='Input Pickle file')
     parser.add_argument('--output_pfile', type=str, default='', help='Output Pickle file')
     parser.add_argument('--model_type', type=str, default='AE',choices=['AE','VAE'], help='Model type')
+    parser.add_argument('--model_quantize', type=bool, default=False, help=' Use QKeras to Quantize Model ')
     parser.add_argument('--latent_dim', type=int, default=3, help='Latent dimension')
     parser.add_argument('--output_model_h5', type=str, default='', help='Output model h5 file')
     parser.add_argument('--output_model_json', type=str, default='', help='Output model json file')
@@ -387,7 +413,7 @@ if __name__ == '__main__':
     parser.add_argument('--output_result', type=str, default='', help='Output result file')
     parser.add_argument('--tag', type=str, default='', help='Tag for output files')
     args=parser.parse_args()
-    run_all(args.input_qcd,args.input_bsm,args.events,args.load_pickle,args.input_pickle,args.output_pfile,args.model_type,args.latent_dim,args.output_model_h5,args.output_model_json,args.output_history,args.batch_size,args.n_epochs,args.output_result,args.tag)
+    run_all(args.input_qcd,args.input_bsm,args.events,args.load_pickle,args.input_pickle,args.output_pfile,args.model_type,args.model_quantize,args.latent_dim,args.output_model_h5,args.output_model_json,args.output_history,args.batch_size,args.n_epochs,args.output_result,args.tag)
 
 
 
