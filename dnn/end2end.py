@@ -30,7 +30,7 @@ try:
 except:
     print("Instal MPL HEP for style formating")
 mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=["#DB4437", "#4285F4", "#F4B400", "#0F9D58", "purple", "goldenrod", "peru", "coral","turquoise",'gray','navy','m','darkgreen','fuchsia','steelblue']) 
-from autoencoder_classes import AE
+from autoencoder_classes import AE,VAE
 
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, TerminateOnNaN
 from neptunecontrib.monitoring.keras import NeptuneMonitor
@@ -170,13 +170,13 @@ def run_all(input_qcd='',input_bsm='',events=10000,load_pickle=False,input_pickl
             results[label]['mean_prediction'] = mean_pred.numpy()
             results[label]['logvar_prediction'] = logvar_pred.numpy()
             results[label]['z_prediction'] = z_pred.numpy()
-            results[label]['kl_loss'] = kl_loss(mean_pred.numpy(),logvar_pred.numpy())
+            results[label]['kl_loss'] = np.nan_to_num(kl_loss(mean_pred.numpy(),logvar_pred.numpy()))
 
         total_loss = return_total_loss(loss, bsm_target[i], bsm_pred)
         results[label]['loss'] = total_loss
         if(model_type=='VAE'):
-            results[label]['total_loss'] = kl_loss(mean_pred.numpy(),z_pred.numpy())+total_loss
-            results[label]['radius'] = radius(mean_pred.numpy(),z_pred.numpy())
+            results[label]['total_loss'] = np.nan_to_num(kl_loss(mean_pred.numpy(),z_pred.numpy())+total_loss)
+            results[label]['radius'] = np.nan_to_num(radius(mean_pred.numpy(),z_pred.numpy()))
             
 
     results['QCD'] = {}
@@ -188,9 +188,9 @@ def run_all(input_qcd='',input_bsm='',events=10000,load_pickle=False,input_pickl
         results['QCD']['mean_prediction'] = qcd_mean.numpy()
         results['QCD']['logvar_prediction'] = qcd_logvar.numpy()
         results['QCD']['z_prediction'] = qcd_z.numpy()
-        results['QCD']['kl_loss'] = kl_loss(qcd_mean.numpy(),qcd_logvar.numpy())
-        results['QCD']['total_loss']=kl_loss(qcd_mean.numpy(),qcd_logvar.numpy())+qcd_loss
-        results['QCD']['radius']=radius(qcd_mean.numpy(),qcd_logvar.numpy())
+        results['QCD']['kl_loss'] = np.nan_to_num(kl_loss(qcd_mean.numpy(),qcd_logvar.numpy()))
+        results['QCD']['total_loss']=np.nan_to_num(kl_loss(qcd_mean.numpy(),qcd_logvar.numpy())+qcd_loss)
+        results['QCD']['radius']=np.nan_to_num(radius(qcd_mean.numpy(),qcd_logvar.numpy()))
 
     min_loss,max_loss=1e5,0
     if(model_type=='VAE'):
@@ -235,66 +235,66 @@ def run_all(input_qcd='',input_bsm='',events=10000,load_pickle=False,input_pickl
 
     # Plot the results
     print("Plotting the results")
-bins_=np.linspace(min_loss,max_loss,100)
-plt.figure(figsize=(10,10))
-for key in results.keys():
-    if(key=='QCD'): plt.hist(results[key]['loss'],label=key,histtype='step',bins=bins_,color='black',linewidth=2,density=True)
-    else: plt.hist(results[key]['loss'],label=key,histtype='step',bins=bins_,density=True)
-plt.legend(fontsize='x-small')
-plt.yscale('log')
-plt.xlabel('Loss')
-plt.ylabel('Density')
-plt.title('Loss distribution')
-plt.savefig('loss_hist_'+model_type+'_'+tag+'.pdf')
-# plt.show()
-
-if(model_type=='VAE'):
-
-    bins_=np.linspace(min_tloss,10000,100)
+    bins_=np.linspace(min_loss,max_loss,100)
     plt.figure(figsize=(10,10))
     for key in results.keys():
-        if(key=='QCD'): plt.hist(results[key]['total_loss'],label=key,histtype='step',bins=bins_,color='black',linewidth=2,density=True)
-        else: plt.hist(results[key]['total_loss'],label=key,histtype='step',bins=bins_,density=True)
+        if(key=='QCD'): plt.hist(results[key]['loss'],label=key,histtype='step',bins=bins_,color='black',linewidth=2,density=True)
+        else: plt.hist(results[key]['loss'],label=key,histtype='step',bins=bins_,density=True)
     plt.legend(fontsize='x-small')
     plt.yscale('log')
-    plt.xlabel('Total Loss')
+    plt.xlabel('Loss')
     plt.ylabel('Density')
-    plt.title('Total Loss distribution')
-    plt.savefig('total_loss_hist_'+model_type+'_'+tag+'.pdf')
+    plt.title('Loss distribution')
+    plt.savefig('loss_hist_'+model_type+'_'+tag+'.pdf')
+    # plt.show()
 
-    bins_=np.linspace(min_r,1500,100)
-    plt.figure(figsize=(10,10))
-    for key in results.keys():
-        if(key=='QCD'): plt.hist(results[key]['radius'],label=key,histtype='step',bins=bins_,color='black',linewidth=2,density=True)
-        else: plt.hist(results[key]['radius'],label=key,histtype='step',bins=bins_,density=True)
-    plt.legend(fontsize='x-small')
-    plt.yscale('log')
-    plt.xlabel('Radius')
-    plt.ylabel('Density')
-    plt.title('Radius distribution')
-    plt.savefig('radius_hist_'+model_type+'_'+tag+'.pdf')
-    
-    for key in results.keys():
-        plt.figure(figsize=(10,10))
-        for i in range(latent_dim):
-            plt.hist(results[key]['mean_prediction'][:,i],bins=100,label='mean '+str(i),histtype='step', density=True,range=[-5,5])
-        plt.legend(fontsize='x-small')
-        plt.xlabel('Loss')
-        plt.ylabel('z')
-        plt.title(key+' mean Z distribution')
-        plt.savefig('mean_z_'+model_type+'_'+key+'_'+tag+'.pdf')
-        # plt.show()
+    if(model_type=='VAE'):
 
-    for key in results.keys():
+        bins_=np.linspace(min_tloss,10000,100)
         plt.figure(figsize=(10,10))
-        for i in range(latent_dim):
-            plt.hist(results[key]['logvar_prediction'][:,i],bins=100,label='logvar '+str(i),histtype='step', density=True,range=[-20,20])
+        for key in results.keys():
+            if(key=='QCD'): plt.hist(results[key]['total_loss'],label=key,histtype='step',bins=bins_,color='black',linewidth=2,density=True)
+            else: plt.hist(results[key]['total_loss'],label=key,histtype='step',bins=bins_,density=True)
         plt.legend(fontsize='x-small')
-        plt.xlabel('Loss')
-        plt.ylabel('z')
-        plt.title(key+' logvar Z distribution')
-        plt.savefig('logvar_z_'+model_type+'_'+key+'_'+tag+'.pdf')
-        # plt.show()
+        plt.yscale('log')
+        plt.xlabel('Total Loss')
+        plt.ylabel('Density')
+        plt.title('Total Loss distribution')
+        plt.savefig('total_loss_hist_'+model_type+'_'+tag+'.pdf')
+
+        bins_=np.linspace(min_r,1500,100)
+        plt.figure(figsize=(10,10))
+        for key in results.keys():
+            if(key=='QCD'): plt.hist(results[key]['radius'],label=key,histtype='step',bins=bins_,color='black',linewidth=2,density=True)
+            else: plt.hist(results[key]['radius'],label=key,histtype='step',bins=bins_,density=True)
+        plt.legend(fontsize='x-small')
+        plt.yscale('log')
+        plt.xlabel('Radius')
+        plt.ylabel('Density')
+        plt.title('Radius distribution')
+        plt.savefig('radius_hist_'+model_type+'_'+tag+'.pdf')
+        
+        for key in results.keys():
+            plt.figure(figsize=(10,10))
+            for i in range(latent_dim):
+                plt.hist(results[key]['mean_prediction'][:,i],bins=100,label='mean '+str(i),histtype='step', density=True,range=[-5,5])
+            plt.legend(fontsize='x-small')
+            plt.xlabel('Loss')
+            plt.ylabel('z')
+            plt.title(key+' mean Z distribution')
+            plt.savefig('mean_z_'+model_type+'_'+key+'_'+tag+'.pdf')
+            # plt.show()
+
+        for key in results.keys():
+            plt.figure(figsize=(10,10))
+            for i in range(latent_dim):
+                plt.hist(results[key]['logvar_prediction'][:,i],bins=100,label='logvar '+str(i),histtype='step', density=True,range=[-20,20])
+            plt.legend(fontsize='x-small')
+            plt.xlabel('Loss')
+            plt.ylabel('z')
+            plt.title(key+' logvar Z distribution')
+            plt.savefig('logvar_z_'+model_type+'_'+key+'_'+tag+'.pdf')
+            # plt.show()
 
     
 
@@ -341,7 +341,7 @@ if(model_type=='VAE'):
         plt.title('Total Loss ROC curve '+model_type)
         plt.xscale('log')
         plt.yscale('log')
-        plt.savefig('roc_curve_'+model_type+'_'+tag+'.pdf')
+        plt.savefig('roc_curve_total_loss_'+model_type+'_'+tag+'.pdf')
         # plt.show()
 
         plt.figure(figsize=(10,10))
@@ -362,7 +362,7 @@ if(model_type=='VAE'):
         plt.title('Radius ROC curve '+model_type)
         plt.xscale('log')
         plt.yscale('log')
-        plt.savefig('roc_curve_'+model_type+'_'+tag+'.pdf')
+        plt.savefig('roc_curve_radius_'+model_type+'_'+tag+'.pdf')
         # plt.show()
 
 
