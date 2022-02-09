@@ -77,10 +77,11 @@ def filterAlgoMap(algoMap):
         wanted_keys = [line.split(',')[1] for line in prescale_file if line.split(',')[4] == "1"]
     return {key: algoMap[key] for key in wanted_keys}
 
-def convert_to_h5(input_file, output_file, tree_name, uGT_tree_name):
+def convert_to_h5(input_file, output_file, tree_name, uGT_tree_name, event_tree_name):
     inFile = uproot.open(input_file)
     l1Tree = inFile[tree_name]
     uGTTree = inFile[uGT_tree_name]
+    evtTree = inFile[event_tree_name]
     nentries = l1Tree.num_entries
 
     bit_arrays = uGTTree.arrays(['m_algoDecisionInitial', 'm_algoDecisionFinal'], library='np')
@@ -91,7 +92,7 @@ def convert_to_h5(input_file, output_file, tree_name, uGT_tree_name):
     algo_map = filterAlgoMap(algo_map)
 
     seeds = {seedname: np.empty([nentries], dtype=bool) for seedname in algo_map.keys()}
-    for seedname, bit in algo_map.iteritems():
+    for seedname, bit in algo_map.items():
         seeds[seedname][:] = final_bits[:,bit].astype(bool)
     seeds["L1bit"] = np.logical_or.reduce([seeds[seedname] for seedname in algo_map.keys()]).astype(bool)
 
@@ -105,10 +106,12 @@ def convert_to_h5(input_file, output_file, tree_name, uGT_tree_name):
                'jetEt', 'jetEta', 'jetPhi',
                'muonEt', 'muonEta', 'muonPhi', 'muonIso', 'muonDxy', 'muonEtUnconstrained',
                'egEt', 'egEta', 'egPhi', 'egIso']
-
+    evtInfoList = ["run","lumi","event","bx","orbit","time"]
+    
     # get awkward arrays
     arrays = l1Tree.arrays(varList)
-
+    evtArray = evtTree.arrays(evtInfoList)
+    
     # sums: store the following
     # kTotalEt, kTotalEtEm, kTotalHt, kMissingEt, kMissingHt,
     # with type 0, 16, 1, 2, 3
@@ -144,7 +147,9 @@ def convert_to_h5(input_file, output_file, tree_name, uGT_tree_name):
     outFile.create_dataset('l1Ele_Iso', data=l1ele_iso, compression='gzip')
     outFile.create_dataset('l1Sum_cyl', data=l1sum_cyl, compression='gzip')
     outFile.create_dataset('l1Sum_cart', data=l1sum_cart, compression='gzip')
-    for seed, values in seeds.iteritems():
+    outFile.create_dataset('EventInfoNames', data=evtInfoList, compression='gzip')
+    outFile.create_dataset('EventInfo', data=ak.to_pandas(evtArray).to_numpy(), compression='gzip')
+    for seed, values in seeds.items():
         outFile.create_dataset(seed, data=values, compression='gzip')
     outFile.close()
 
