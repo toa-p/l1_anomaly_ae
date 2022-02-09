@@ -51,13 +51,14 @@ def return_total_loss(loss, bsm_t, bsm_pred):
     return total_loss
 
 
+
 def run_all(input_qcd='',input_bsm='',events=10000,load_pickle=False,input_pickle='',output_pfile='',model_type='AE',latent_dim=3,output_model_h5='',output_model_json='',output_history='',batch_size= 1024,n_epochs = 20,output_result='',tag=''):
 
     if(load_pickle):
         if(input_pickle==''):
             print('Please provide input pickle files')
             return
-        with open("data-for-dnn-v2.pickle", 'rb') as f:
+        with open(input_pickle, 'rb') as f:
             X_train_flatten, X_train_scaled, X_test_flatten, X_test_scaled, bsm_data, bsm_target, pt_scaler = pickle.load(f)
             bsm_labels=['VectorZPrimeToQQ__M50',
                   'VectorZPrimeToQQ__M100',
@@ -79,6 +80,11 @@ def run_all(input_qcd='',input_bsm='',events=10000,load_pickle=False,input_pickl
             print('Please provide input H5 files')
             return
         X_train_flatten, X_train_scaled, X_test_flatten, X_test_scaled, bsm_data, bsm_target, pt_scaler, bsm_labels = prepare_data(input_qcd, input_bsm, events, '',True)
+
+    if(output_pfile!=''):
+        with open(output_pfile, 'wb') as f:
+            pickle.dump([X_train_flatten, X_train_scaled, X_test_flatten, X_test_scaled, bsm_data, bsm_target, pt_scaler, bsm_labels], f)
+        print("Saved Pickle data to disk")
     
     if(model_type=='AE'):
         autoencoder = build_AE(X_train_flatten.shape[-1],latent_dim)
@@ -111,21 +117,21 @@ def run_all(input_qcd='',input_bsm='',events=10000,load_pickle=False,input_pickl
                         callbacks=callbacks)
 
     if(output_model_h5!=''):
-        model_json = autoencoder.to_json()
-        with open(output_model_json, 'w') as json_file:
-            json_file.write(model_json)
-        autoencoder.save_weights(output_model_h5)
-        print("Saved model to disk")
+        if(model_type=='VAE'):
+            model.save(os.path.join(os.getcwd(),output_model_h5.split('.')[0]))
+        else:
+            model_json = autoencoder.to_json()
+            with open(output_model_json, 'w') as json_file:
+                json_file.write(model_json)
+            autoencoder.save_weights(output_model_h5)
+            print("Saved model to disk")
+
 
     if(output_history!=''):
         with open(output_history, 'wb') as f:
             pickle.dump(history.history, f)
         print("Saved history to disk")
     
-    if(output_pfile!=''):
-        with open(output_pfile, 'wb') as f:
-            pickle.dump([X_train_flatten, X_train_scaled, X_test_flatten, X_test_scaled, bsm_data, bsm_target, pt_scaler, bsm_labels], f)
-        print("Saved Pickle data to disk")
 
     
     # Plot training & validation loss values
@@ -146,35 +152,62 @@ def run_all(input_qcd='',input_bsm='',events=10000,load_pickle=False,input_pickl
     if(model_type=='AE'): 
         qcd_prediction = model.autoencoder(X_test_scaled).numpy()
     elif(model_type=='VAE'):
-        mean_pred, logvar_pred, z_pred = model.encoder(bsm_data[i])
-        bsm_prediction = decoder(z_pred)
+        qcd_mean, qcd_logvar, qcd_z = model.encoder(X_test_scaled)
+        qcd_prediction = model.decoder(qcd_z).numpy()
 
-    
 
     results={}
-    min_loss,max_loss=1e5,0
     for i, label in enumerate(bsm_labels):
         results[label] = {}
-        if(model_type='AE'): 
+        if(model_type=='AE'): 
             bsm_pred = model.autoencoder(bsm_data[i]).numpy()
-        elif(model_type='VAE'): 
+        elif(model_type=='VAE'): 
             mean_pred, logvar_pred, z_pred = model.encoder(bsm_data[i])
-            bsm_prediction = decoder(z_pred)
+            bsm_pred = decoder(z_pred).numpy()
         results[label]['target'] = bsm_target[i]
         results[label]['prediction'] = bsm_pred
-        if(model_type='VAE'):
-            results[label]['mean_prediction'] = mean_pred
-            results[label]['logvar_prediction'] = logvar_pred
-            results[label]['z_prediction'] = z_pred
+        if(model_type=='VAE'):
+            results[label]['mean_prediction'] = mean_pred.numpy()
+            results[label]['logvar_prediction'] = logvar_pred.numpy()
+            results[label]['z_prediction'] = z_pred.numpy()
+            results[label]['kl_loss'] = kl_loss(mean_pred.numpy(),logvar_pred.numpy())
+
         total_loss = return_total_loss(loss, bsm_target[i], bsm_pred)
-        if(np.min(total_loss)<min_loss): min_loss = np.min(total_loss)
-        if(np.max(total_loss)>max_loss): max_loss = np.max(total_loss)
         results[label]['loss'] = total_loss
+        if(model_type=='VAE'):
+            results[label]['total_loss'] = kl_loss(mean_pred.numpy(),z_pred.numpy())+total_loss
+            results[label]['radius'] = radius(mean_pred.numpy(),z_pred.numpy())
+            
 
     results['QCD'] = {}
     results['QCD']['target'] = X_test_scaled
     results['QCD']['prediction'] = qcd_prediction
-    results['QCD']['loss'] = return_total_loss(loss, X_test_scaled, qcd_prediction)
+    qcd_loss = return_total_loss(loss, X_test_scaled, qcd_prediction)
+    results['QCD']['loss'] = qcd_loss
+    if(model_type=='VAE'):
+        results['QCD']['mean_prediction'] = qcd_mean.numpy()
+        results['QCD']['logvar_prediction'] = qcd_logvar.numpy()
+        results['QCD']['z_prediction'] = qcd_z.numpy()
+        results['QCD']['kl_loss'] = kl_loss(qcd_mean.numpy(),qcd_logvar.numpy())
+        results['QCD']['total_loss']=kl_loss(qcd_mean.numpy(),qcd_logvar.numpy())+qcd_loss
+        results['QCD']['radius']=radius(qcd_mean.numpy(),qcd_logvar.numpy())
+
+    min_loss,max_loss=1e5,0
+    if(model_type=='VAE'):
+        min_tloss,max_tloss=1e5,0
+        min_r,max_r=1e5,0
+    for key in results.keys():
+        if(key=='QCD'): continue
+        if(np.min(results[key]['loss'])<min_loss): min_loss = np.min(results[key]['loss'])
+        if(np.max(results[key]['loss'])>max_loss): max_loss = np.max(results[key]['loss'])
+        if(model_type=='VAE'):
+            if(np.min(results[key]['total_loss'])<min_tloss): min_tloss = np.min(results[key]['total_loss'])
+            if(np.max(results[key]['total_loss'])>max_tloss): max_tloss = np.max(results[key]['total_loss'])
+            if(max_tloss>np.mean(results[key]['total_loss'])+10*np.std(results[key]['total_loss'])): max_tloss = np.mean(results[key]['total_loss'])+10*np.std(results[key]['total_loss'])
+            if(np.min(results[key]['radius'])<min_r): min_r = np.min(results[key]['radius'])
+            if(np.max(results[key]['radius'])>max_r): max_r = np.max(results[key]['radius'])
+            if(max_r>np.mean(results[key]['radius'])+10*np.std(results[key]['radius'])): max_r = np.mean(results[key]['radius'])+10*np.std(results[key]['radius'])
+
 
     if(output_result!=''):
         h5f = h5py.File(output_result, 'w')
@@ -183,29 +216,90 @@ def run_all(input_qcd='',input_bsm='',events=10000,load_pickle=False,input_pickl
         h5f.create_dataset('QCD_input', data=X_test_flatten)
         h5f.create_dataset('QCD_target', data=X_test_scaled)
         h5f.create_dataset('predicted_QCD', data = qcd_prediction)
+        if(model_type=='VAE'):
+            h5f.create_dataset('encoded_mean_QCD', data=qcd_mean.numpy())
+            h5f.create_dataset('encoded_logvar_QCD', data=qcd_logvar.numpy())
+            h5f.create_dataset('encoded_z_QCD', data=qcd_z.numpy())
         for i, key in enumerate(results):
             if(key=='QCD'): continue
             h5f.create_dataset('%s_scaled' %key, data=results[key]['target'])
             h5f.create_dataset('%s_input' %key, data=bsm_data[i])
             h5f.create_dataset('predicted_%s' %key, data=results[key]['prediction'])
+            if(model_type=='VAE'):
+                h5f.create_dataset('encoded_mean_%s' %key, data=results[key]['mean_prediction'])
+                h5f.create_dataset('encoded_logvar_%s' %key, data=results[key]['logvar_prediction'])
+                h5f.create_dataset('encoded_z_%s' %key, data=results[key]['z_prediction'])
         print("*** OutputFile Created")
         h5f.close() 
 
 
     # Plot the results
     print("Plotting the results")
-    bins_=np.linspace(min_loss,max_loss,100)
+bins_=np.linspace(min_loss,max_loss,100)
+plt.figure(figsize=(10,10))
+for key in results.keys():
+    if(key=='QCD'): plt.hist(results[key]['loss'],label=key,histtype='step',bins=bins_,color='black',linewidth=2,density=True)
+    else: plt.hist(results[key]['loss'],label=key,histtype='step',bins=bins_,density=True)
+plt.legend(fontsize='x-small')
+plt.yscale('log')
+plt.xlabel('Loss')
+plt.ylabel('Density')
+plt.title('Loss distribution')
+plt.savefig('loss_hist_'+model_type+'_'+tag+'.pdf')
+# plt.show()
+
+if(model_type=='VAE'):
+
+    bins_=np.linspace(min_tloss,10000,100)
     plt.figure(figsize=(10,10))
     for key in results.keys():
-        if(key=='QCD'): plt.hist(results[key]['loss'],label=key,histtype='step',bins=bins_,color='black',linewidth=2,density=True)
-        else: plt.hist(results[key]['loss'],label=key,histtype='step',bins=bins_,density=True)
+        if(key=='QCD'): plt.hist(results[key]['total_loss'],label=key,histtype='step',bins=bins_,color='black',linewidth=2,density=True)
+        else: plt.hist(results[key]['total_loss'],label=key,histtype='step',bins=bins_,density=True)
     plt.legend(fontsize='x-small')
     plt.yscale('log')
-    plt.xlabel('Loss')
+    plt.xlabel('Total Loss')
     plt.ylabel('Density')
-    plt.title('Loss distribution')
-    plt.savefig('loss_hist_'+model_type+'_'+tag+'.pdf')
-    # plt.show()
+    plt.title('Total Loss distribution')
+    plt.savefig('total_loss_hist_'+model_type+'_'+tag+'.pdf')
+
+    bins_=np.linspace(min_r,1500,100)
+    plt.figure(figsize=(10,10))
+    for key in results.keys():
+        if(key=='QCD'): plt.hist(results[key]['radius'],label=key,histtype='step',bins=bins_,color='black',linewidth=2,density=True)
+        else: plt.hist(results[key]['radius'],label=key,histtype='step',bins=bins_,density=True)
+    plt.legend(fontsize='x-small')
+    plt.yscale('log')
+    plt.xlabel('Radius')
+    plt.ylabel('Density')
+    plt.title('Radius distribution')
+    plt.savefig('radius_hist_'+model_type+'_'+tag+'.pdf')
+    
+    for key in results.keys():
+        plt.figure(figsize=(10,10))
+        for i in range(latent_dim):
+            plt.hist(results[key]['mean_prediction'][:,i],bins=100,label='mean '+str(i),histtype='step', density=True,range=[-5,5])
+        plt.legend(fontsize='x-small')
+        plt.xlabel('Loss')
+        plt.ylabel('z')
+        plt.title(key+' mean Z distribution')
+        plt.savefig('mean_z_'+model_type+'_'+key+'_'+tag+'.pdf')
+        # plt.show()
+
+    for key in results.keys():
+        plt.figure(figsize=(10,10))
+        for i in range(latent_dim):
+            plt.hist(results[key]['logvar_prediction'][:,i],bins=100,label='logvar '+str(i),histtype='step', density=True,range=[-20,20])
+        plt.legend(fontsize='x-small')
+        plt.xlabel('Loss')
+        plt.ylabel('z')
+        plt.title(key+' logvar Z distribution')
+        plt.savefig('logvar_z_'+model_type+'_'+key+'_'+tag+'.pdf')
+        # plt.show()
+
+    
+
+
+
 
     plt.figure(figsize=(10,10))
     for key in results.keys():
@@ -227,6 +321,50 @@ def run_all(input_qcd='',input_bsm='',events=10000,load_pickle=False,input_pickl
     plt.yscale('log')
     plt.savefig('roc_curve_'+model_type+'_'+tag+'.pdf')
     # plt.show()
+
+    if(model_type=='VAE'):
+        plt.figure(figsize=(10,10))
+        for key in results.keys():
+            if key=='QCD': continue
+
+            true_label = np.concatenate(( np.ones(results[key]['target'].shape[0]), np.zeros(results['QCD']['prediction'].shape[0]) ))
+            pred_loss = np.concatenate(( results[key]['total_loss'], results['QCD']['total_loss'] ))
+            fpr_loss, tpr_loss, threshold_loss = roc_curve(true_label, pred_loss)
+
+            auc_loss = auc(fpr_loss, tpr_loss)
+            plt.plot(fpr_loss, tpr_loss, label='%s (AUC = %0.2f)' %(key,auc_loss))
+        plt.legend(fontsize='x-small')
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.plot(np.linspace(0, 1),np.linspace(0, 1), '--', color='0.75')
+        plt.axvline(0.00001, color='red', linestyle='dashed', linewidth=1)
+        plt.title('Total Loss ROC curve '+model_type)
+        plt.xscale('log')
+        plt.yscale('log')
+        plt.savefig('roc_curve_'+model_type+'_'+tag+'.pdf')
+        # plt.show()
+
+        plt.figure(figsize=(10,10))
+        for key in results.keys():
+            if key=='QCD': continue
+
+            true_label = np.concatenate(( np.ones(results[key]['target'].shape[0]), np.zeros(results['QCD']['prediction'].shape[0]) ))
+            pred_loss = np.concatenate(( results[key]['radius'], results['QCD']['radius'] ))
+            fpr_loss, tpr_loss, threshold_loss = roc_curve(true_label, pred_loss)
+
+            auc_loss = auc(fpr_loss, tpr_loss)
+            plt.plot(fpr_loss, tpr_loss, label='%s (AUC = %0.2f)' %(key,auc_loss))
+        plt.legend(fontsize='x-small')
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.plot(np.linspace(0, 1),np.linspace(0, 1), '--', color='0.75')
+        plt.axvline(0.00001, color='red', linestyle='dashed', linewidth=1)
+        plt.title('Radius ROC curve '+model_type)
+        plt.xscale('log')
+        plt.yscale('log')
+        plt.savefig('roc_curve_'+model_type+'_'+tag+'.pdf')
+        # plt.show()
+
 
     return 
 
