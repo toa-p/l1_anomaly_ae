@@ -175,7 +175,7 @@ def run_all(input_qcd='',input_bsm='',events=10000,load_pickle=False,input_pickl
     print("Evaluating the model")
     loss = make_mse_loss_numpy
     if(model_type=='AE'): 
-        qcd_prediction = model.autoencoder(X_test_scaled).numpy()
+        qcd_prediction = model.autoencoder(X_test_flatten).numpy()
     elif(model_type=='VAE'):
         qcd_mean, qcd_logvar, qcd_z = model.encoder(X_test_scaled)
         qcd_prediction = model.decoder(qcd_z).numpy()
