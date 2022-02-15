@@ -85,7 +85,7 @@ def run_all(input_qcd='',input_bsm='',events=10000,load_pickle=False,input_pickl
 
     if(output_pfile!=''):
         with open(output_pfile, 'wb') as f:
-            pickle.dump([X_train_flatten, X_train_scaled, X_test_flatten, X_test_scaled, bsm_data, bsm_target, pt_scaler, bsm_labels], f)
+            pickle.dump([X_train_flatten, X_train_scaled, X_test_flatten, X_test_scaled, bsm_data, bsm_target, pt_scaler, bsm_labels], f, protocol=pickle.HIGHEST_PROTOCOL)
         print("Saved Pickle data to disk")
     
     if(model_type=='AE'):
@@ -154,7 +154,7 @@ def run_all(input_qcd='',input_bsm='',events=10000,load_pickle=False,input_pickl
 
     if(output_history!=''):
         with open(output_history, 'wb') as f:
-            pickle.dump(history.history, f)
+            pickle.dump(history.history, f, protocol=pickle.HIGHEST_PROTOCOL)
         print("Saved history to disk")
     
 
@@ -221,17 +221,18 @@ def run_all(input_qcd='',input_bsm='',events=10000,load_pickle=False,input_pickl
     if(model_type=='VAE'):
         min_tloss,max_tloss=1e5,0
         min_r,max_r=1e5,0
+        min_kloss,max_kloss=1e5,0
     for key in results.keys():
         if(key=='QCD'): continue
         if(np.min(results[key]['loss'])<min_loss): min_loss = np.min(results[key]['loss'])
-        if(np.max(results[key]['loss'])>max_loss): max_loss = np.max(results[key]['loss'])
+        if(np.mean(results[key]['loss'])+10*np.std(results[key]['loss'])>max_loss): max_loss = np.mean(results[key]['loss'])+10*np.std(results[key]['loss'])
         if(model_type=='VAE'):
             if(np.min(results[key]['total_loss'])<min_tloss): min_tloss = np.min(results[key]['total_loss'])
-            if(np.max(results[key]['total_loss'])>max_tloss): max_tloss = np.max(results[key]['total_loss'])
-            if(max_tloss>np.mean(results[key]['total_loss'])+10*np.std(results[key]['total_loss'])): max_tloss = np.mean(results[key]['total_loss'])+10*np.std(results[key]['total_loss'])
+            if(np.mean(results[key]['total_loss'])+10*np.std(results[key]['total_loss'])>max_tloss): max_tloss = np.mean(results[key]['total_loss'])+10*np.std(results[key]['total_loss'])
             if(np.min(results[key]['radius'])<min_r): min_r = np.min(results[key]['radius'])
-            if(np.max(results[key]['radius'])>max_r): max_r = np.max(results[key]['radius'])
-            if(max_r>np.mean(results[key]['radius'])+10*np.std(results[key]['radius'])): max_r = np.mean(results[key]['radius'])+10*np.std(results[key]['radius'])
+            if(np.mean(results[key]['radius'])+10*np.std(results[key]['radius'])>max_r): max_r = np.mean(results[key]['radius'])+10*np.std(results[key]['radius'])
+            if(np.min(results[key]['kl_loss'])<min_kloss): min_kloss = np.min(results[key]['kl_loss'])
+            if(np.mean(results[key]['kl_loss'])+10*np.std(results[key]['kl_loss'])>max_kloss): max_kloss = np.mean(results[key]['kl_loss'])+10*np.std(results[key]['kl_loss'])
 
 
     if(output_result!=''):
@@ -275,7 +276,7 @@ def run_all(input_qcd='',input_bsm='',events=10000,load_pickle=False,input_pickl
 
     if(model_type=='VAE'):
 
-        bins_=np.linspace(min_tloss,10000,100)
+        bins_=np.linspace(min_tloss,max_tloss,100)
         plt.figure(figsize=(10,10))
         for key in results.keys():
             if(key=='QCD'): plt.hist(results[key]['total_loss'],label=key,histtype='step',bins=bins_,color='black',linewidth=2,density=True)
@@ -287,7 +288,7 @@ def run_all(input_qcd='',input_bsm='',events=10000,load_pickle=False,input_pickl
         plt.title('Total Loss distribution')
         plt.savefig('total_loss_hist_'+model_type+'_'+tag+'.pdf')
 
-        bins_=np.linspace(min_r,1500,100)
+        bins_=np.linspace(min_r,max_r,100)
         plt.figure(figsize=(10,10))
         for key in results.keys():
             if(key=='QCD'): plt.hist(results[key]['radius'],label=key,histtype='step',bins=bins_,color='black',linewidth=2,density=True)
