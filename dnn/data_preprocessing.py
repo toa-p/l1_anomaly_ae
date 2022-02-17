@@ -17,7 +17,7 @@ def prepare_data(input_file, input_bsm, events, output_file,retun_data):
     # read QCD data
     with h5py.File(input_file, 'r') as h5f:
         # remove last feature, which is the type of particle
-        data = h5f['full_data_cyl'][:events,:,:]
+        data = np.array(h5f['full_data_cyl'][:events,:,:]).astype(np.float16)
         #np.random.shuffle(data)
         #data = data[:events,:,:]
         print("*** Reading QCD")
@@ -49,7 +49,7 @@ def prepare_data(input_file, input_bsm, events, output_file,retun_data):
         bsm_labels = []
         for key in h5f2.keys():
             if len(h5f2[key].shape) < 3: continue
-            bsm_file = h5f2[key][:events,:,:]
+            bsm_file = np.array(h5f2[key][:events,:,:]).astype(np.float16)
             bsm = bsm_file.reshape(bsm_file.shape[0],bsm_file.shape[1]*bsm_file.shape[2])
             bsm_data.append(bsm)
             bsm_labels.append(key)

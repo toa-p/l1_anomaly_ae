@@ -9,6 +9,7 @@ import pickle
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 import tensorflow as tf
 import sys
+import gc
 
 # import setGPU
 import tensorflow.keras as keras
@@ -16,6 +17,7 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Dense, Lambda, BatchNormalization, Activation, Concatenate, Dropout, Layer
 from tensorflow.keras.layers import ReLU, LeakyReLU
 from tensorflow.keras import backend as K
+tf.keras.mixed_precision.set_global_policy('mixed_float16')
 
 from datetime import datetime
 from tensorboard import program
@@ -82,6 +84,7 @@ def run_all(input_qcd='',input_bsm='',events=10000,load_pickle=False,input_pickl
             print('Please provide input H5 files')
             return
         X_train_flatten, X_train_scaled, X_test_flatten, X_test_scaled, bsm_data, bsm_target, pt_scaler, bsm_labels = prepare_data(input_qcd, input_bsm, events, '',True)
+        # print(X_train_flatten.dtype, X_train_scaled.dtype, X_test_flatten.dtype, X_test_scaled.dtype, bsm_data[0].dtype, bsm_target[0].dtype)
 
     if(output_pfile!=''):
         with open(output_pfile, 'wb') as f:
@@ -171,14 +174,17 @@ def run_all(input_qcd='',input_bsm='',events=10000,load_pickle=False,input_pickl
     plt.savefig('loss.pdf')
     # plt.show()
 
+    del X_train_flatten, X_train_scaled
+    gc.collect()
+
     # Evaluate the model
     print("Evaluating the model")
     loss = make_mse_loss_numpy
     if(model_type=='AE'): 
-        qcd_prediction = model.autoencoder(X_test_flatten).numpy()
+        qcd_prediction = (model.autoencoder(X_test_flatten).numpy()).astype('float16')
     elif(model_type=='VAE'):
         qcd_mean, qcd_logvar, qcd_z = model.encoder(X_test_scaled)
-        qcd_prediction = model.decoder(qcd_z).numpy()
+        qcd_prediction = (model.decoder(qcd_z).numpy()).astype('float16')
 
 
     results={}

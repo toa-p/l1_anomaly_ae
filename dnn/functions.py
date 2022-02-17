@@ -10,6 +10,7 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 import pickle
 import h5py
 from sklearn.model_selection import train_test_split
+tf.keras.mixed_precision.set_global_policy('mixed_float16')
 
 #tf.compat.v1.enable_eager_execution()
 
@@ -267,6 +268,7 @@ def make_mse_loss(inputs, outputs):
     
     inputs = tf.squeeze(inputs, axis=-1)
     inputs = tf.cast(inputs, dtype=tf.float32)
+    outputs = tf.cast(outputs, dtype=tf.float32)
     # trick with phi
     outputs_phi = math.pi*tf.math.tanh(outputs)
     # trick with phi

@@ -4,6 +4,7 @@ import os
 import tensorflow as tf
 from tensorflow.keras.models import Model
 import tensorflow.keras as keras
+tf.keras.mixed_precision.set_global_policy('mixed_float16')
 
 class VAE(Model):
     def __init__(self, encoder, decoder, **kwargs):
@@ -38,6 +39,7 @@ class VAE(Model):
             beta = 0.8
             kl_loss = -0.5 * (1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
             kl_loss = tf.reduce_mean(kl_loss, axis=-1)
+            kl_loss = tf.cast(kl_loss, tf.float32)
             total_loss = (1-beta)*reconstruction_loss + beta*kl_loss
         grads = tape.gradient(total_loss, self.trainable_weights)
         self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
@@ -61,6 +63,7 @@ class VAE(Model):
         beta=0.8
         kl_loss = -0.5 * (1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
         kl_loss = tf.reduce_mean(kl_loss, axis=1)
+        kl_loss = tf.cast(kl_loss, tf.float32)
         total_loss = (1-beta)*reconstruction_loss + beta*kl_loss
         self.total_val_loss_tracker.update_state(total_loss)
         self.reconstruction_val_loss_tracker.update_state((1-beta)*reconstruction_loss)

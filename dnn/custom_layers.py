@@ -40,9 +40,12 @@ class Sampling(Layer):
 
     def call(self, inputs):
         z_mean, z_log_var = inputs
+        z_mean = tf.cast(z_mean, dtype=tf.float32)
+        z_log_var = tf.cast(z_log_var, dtype=tf.float32)
         batch = tf.shape(z_mean)[0]
         dim = tf.shape(z_mean)[1]
         epsilon = K.random_normal(shape=(batch, dim))
+        epsilon = tf.cast(epsilon, dtype=tf.float32)
         return z_mean + tf.exp(0.5 * z_log_var) * epsilon
     
 class CustomMSE(Distance):

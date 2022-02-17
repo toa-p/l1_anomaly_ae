@@ -9,6 +9,7 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Dense, Lambda, BatchNormalization, Activation, Concatenate, Dropout, Layer
 from tensorflow.keras.layers import ReLU, LeakyReLU
 from tensorflow.keras import backend as K
+tf.keras.mixed_precision.set_global_policy('mixed_float16')
 import math
 
 from datetime import datetime

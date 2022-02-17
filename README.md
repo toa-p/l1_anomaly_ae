@@ -162,8 +162,11 @@ For DNN once we have ```.h5``` Files, you can run the entire chain using the scr
 ```
 python end2end.py --input_qcd /eos/uscms/store/group/lpctrig/jngadiub/L1TNtupleRun3-h5-extended/QCD_preprocessed.h5 --input_bsm /eos/uscms/store/group/lpctrig/jngadiub/L1TNtupleRun3-h5-extended/BSM_preprocessed.h5 --events 10000 --output_pfile data.pickle --model_type AE --latent_dim 3 --output_model_h5 model.h5 --output_model_json model.json --output_history history.h5 --batch_size 1024 --n_epochs 150 --output_result results.h5 --tag test
 ```
+To run the same with QKeras, make sure to add the flag ```--model_quantize 1``` for the above script.
 
-This Script is also avilable for an interactive run in ```end2end_demo.ipynb```. If incase only individual parts of the code are to be run, use the subsequent steps.
+This Script is also avilable for an interactive run in ```end2end_demo.ipynb```. 
+
+If incase only individual parts of the code are to be run, use the subsequent steps.
 
 #### Prepare the data
 
