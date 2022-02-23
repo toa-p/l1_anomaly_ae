@@ -1,0 +1,9 @@
+*.h5
+*.json
+*.tmp
+*.root
+*.out
+*.pickle
+*__pycache__
+*.ipynb_checkpoints
+*.pdf

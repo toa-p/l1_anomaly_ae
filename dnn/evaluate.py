@@ -20,6 +20,7 @@ def evaluate(input_h5, input_json, input_file, input_history, output_result):
 
     # load history
     with open(input_history, 'rb') as f:
+        print("*** Loaded the data")
         history = pickle.load(f)
 	    
     ae = AE(model)
@@ -56,7 +57,7 @@ def evaluate(input_h5, input_json, input_file, input_history, output_result):
        h5f.create_dataset('%s_scaled' %bsm[0], data=bsm[1])
        h5f.create_dataset('%s_input' %bsm[0], data=bsm_data[i])
        h5f.create_dataset('predicted_%s' %bsm[0], data=bsm[2])
-
+    print("*** OutputFile Created")
     h5f.close()
     		  
     #plt.figure()

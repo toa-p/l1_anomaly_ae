@@ -9,15 +9,19 @@ import pickle
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from functions import prepare_data
 import tensorflow as tf
+import sys
 
-def prepare_data(input_file, input_bsm, events, output_file):
+
+
+def prepare_data(input_file, input_bsm, events, output_file,retun_data):
     # read QCD data
     with h5py.File(input_file, 'r') as h5f:
         # remove last feature, which is the type of particle
-        data = h5f['full_data_cyl'][:events,:,:]
+        data = np.array(h5f['full_data_cyl'][:events,:,:]).astype(np.float16)
         #np.random.shuffle(data)
         #data = data[:events,:,:]
-        print(data.shape)
+        print("*** Reading QCD")
+        print("QCD:",data.shape)
     
     # fit scaler to the full data
     pt_scaler = StandardScaler()
@@ -31,18 +35,27 @@ def prepare_data(input_file, input_bsm, events, output_file):
     X_train, X_test, Y_train, Y_test = train_test_split(data, data_target, test_size=0.5)
     del data, data_target
     
+    print(X_test.shape)
+    # print(X_test[:,1:2])
+    #print(Y_test[:,19:20])
+    # sys.exit()
+    
     # read BSM data
     bsm_data = []
     
-    import sys
+
     with h5py.File(input_bsm,'r') as h5f2:
         #print(h5f2.keys())
+        bsm_labels = []
         for key in h5f2.keys():
             if len(h5f2[key].shape) < 3: continue
-            bsm_file = h5f2[key][:,:,:]
+            bsm_file = np.array(h5f2[key][:events,:,:]).astype(np.float16)
             bsm = bsm_file.reshape(bsm_file.shape[0],bsm_file.shape[1]*bsm_file.shape[2])
             bsm_data.append(bsm)
-    
+            bsm_labels.append(key)
+            print(key,":",bsm_file.shape)
+    print("*** Read BSM Data")
+
     bsm_scaled_data=[]
     for bsm in bsm_data:
         bsm = bsm.reshape(bsm.shape[0],19,3,1)
@@ -55,8 +68,16 @@ def prepare_data(input_file, input_bsm, events, output_file):
     
     data = [X_train, Y_train, X_test, Y_test, bsm_data, bsm_scaled_data, pt_scaler]
 
-    with open(output_file, 'wb') as handle:
-        pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    if(retun_data):
+        print("reutrned data")
+        return X_train, Y_train, X_test, Y_test, bsm_data, bsm_scaled_data, pt_scaler, bsm_labels
+
+    if(output_file!=''):
+        with open(output_file, 'wb') as handle: 
+            pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            print("Wrote data to a pickle file")
+    
+
 	
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -64,5 +85,6 @@ if __name__ == '__main__':
     parser.add_argument('--input-bsm', type=str, help='Input file for generated BSM')
     parser.add_argument('--events', type=int, default=-1, help='How many events to proceed')
     parser.add_argument('--output-file', type=str, help='output file', required=True)
+    parser.add_argument('--return-data', type=bool, help='Return the data',default=False, required=False)
     args = parser.parse_args()
     prepare_data(**vars(args))

@@ -1,6 +1,6 @@
 import numpy as np
 import h5py
-import setGPU
+# import setGPU
 import argparse
 
 import tensorflow as tf
@@ -15,9 +15,9 @@ from datetime import datetime
 from tensorboard import program
 import os
 import pathlib
-import matplotlib
-import matplotlib.pyplot as plt
-matplotlib.use('agg')
+# import matplotlib
+# import matplotlib.pyplot as plt
+# matplotlib.use('agg')
 
 import pickle
 from autoencoder_classes import AE
