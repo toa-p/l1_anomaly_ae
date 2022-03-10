@@ -203,7 +203,7 @@ def results(input_qcd,input_bsm,data_file,outdir,events,model_type,latent_dim,n_
              mine,maxe = 0,batch_size           
              for b in range(1,nbatches+1):
                  print(b,mine,maxe)
-                 qcd_prediction = (model.autoencoder(X_test_flatten[mine:maxe,:]).numpy()).astype('float16')
+                 qcd_prediction[mine:maxe,:] = (model.autoencoder(X_test_flatten[mine:maxe,:]).numpy()).astype('float16')
                  if maxe==nevents: break 
                  mine,maxe = maxe+1,maxe+batch_size		    
                  if maxe > nevents: maxe=nevents       
