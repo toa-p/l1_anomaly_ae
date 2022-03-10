@@ -157,7 +157,7 @@ def train(input_qcd,input_bsm,data_file,outdir,events,model_type,latent_dim,batc
     del X_train_flatten, X_train_scaled
     gc.collect()
 
-def results(input_qcd,input_bsm,data_file,outdir,events,model_type,latent_dim,n_epochs,load_pickle,quantize):
+def get_results(input_qcd,input_bsm,data_file,outdir,events,model_type,latent_dim):
 
     if not os.path.exists(data_file):
      print("The data file",data_file,'does not exist! Please rerun the training step!')
@@ -283,12 +283,14 @@ def results(input_qcd,input_bsm,data_file,outdir,events,model_type,latent_dim,n_
     
     print("*** OutputFile Created")
     h5f.close()
-	        
+    
+    return results
+    	        
 def evaluate(input_qcd,input_bsm,data_file,outdir,events,model_type,latent_dim,batch_size,n_epochs,load_pickle,quantize,load_results):
 
-    if not load_results: results(input_qcd,input_bsm,data_file,outdir,events,model_type,latent_dim,n_epochs,load_pickle,quantize)
-    results_ = h5py.File(outdir+'/results.h5', 'r')    
-    bsm_labels = [k.decode('utf-8') for k in results_['bsm_labels'][()]]
+    if not load_results: get_results(input_qcd,input_bsm,data_file,outdir,events,model_type,latent_dim)
+    results = h5py.File(outdir+'/results.h5', 'r')    
+    bsm_labels = [k.decode('utf-8') for k in results['bsm_labels'][()]]
     
     min_loss,max_loss=1e5,0
     if(model_type=='VAE'):
@@ -296,22 +298,22 @@ def evaluate(input_qcd,input_bsm,data_file,outdir,events,model_type,latent_dim,b
         min_r,max_r=1e5,0
         min_kloss,max_kloss=1e5,0
     for key in bsm_labels:
-        if(np.min(results_['mse_loss_%s'%key])<min_loss): min_loss = np.min(results_['mse_loss_%s'%key])
-        if(np.mean(results_['mse_loss_%s'%key])+10*np.std(results_['mse_loss_%s'%key])>max_loss): max_loss = np.mean(results_['mse_loss_%s'%key])+10*np.std(results_['mse_loss_%s'%key])
+        if(np.min(results['mse_loss_%s'%key])<min_loss): min_loss = np.min(results['mse_loss_%s'%key])
+        if(np.mean(results['mse_loss_%s'%key])+10*np.std(results['mse_loss_%s'%key])>max_loss): max_loss = np.mean(results['mse_loss_%s'%key])+10*np.std(results['mse_loss_%s'%key])
         if(model_type=='VAE'):
-            if(np.min(results_['total_loss_%s'%key])<min_tloss): min_tloss = np.min(results_['total_loss_%s'%key])
-            if(np.mean(results_['total_loss_%s'%key])+10*np.std(results_['total_loss_%s'%key])>max_tloss): max_tloss = np.mean(results_['total_loss_%s'%key])+10*np.std(results_['total_loss_%s'%key])
-            if(np.min(results_['radius_%s'%key])<min_r): min_r = np.min(results_['radius_%s'%key])
-            if(np.mean(results_['radius_%s'%key])+10*np.std(results_['radius_%s'%key])>max_r): max_r = np.mean(results_['radius_%s'%key])+10*np.std(results_['radius_%s'%key])
-            if(np.min(results_['kl_loss_%s'%key])<min_kloss): min_kloss = np.min(results_['kl_loss_%s'%key])
-            if(np.mean(results_['kl_loss_%s'%key])+10*np.std(results_['kl_loss_%s'%key])>max_kloss): max_kloss = np.mean(results_['kl_loss_%s'%key])+10*np.std(results_['kl_loss_%s'%key])
+            if(np.min(results['total_loss_%s'%key])<min_tloss): min_tloss = np.min(results['total_loss_%s'%key])
+            if(np.mean(results['total_loss_%s'%key])+10*np.std(results['total_loss_%s'%key])>max_tloss): max_tloss = np.mean(results['total_loss_%s'%key])+10*np.std(results['total_loss_%s'%key])
+            if(np.min(results['radius_%s'%key])<min_r): min_r = np.min(results['radius_%s'%key])
+            if(np.mean(results['radius_%s'%key])+10*np.std(results['radius_%s'%key])>max_r): max_r = np.mean(results['radius_%s'%key])+10*np.std(results['radius_%s'%key])
+            if(np.min(results['kl_loss_%s'%key])<min_kloss): min_kloss = np.min(results['kl_loss_%s'%key])
+            if(np.mean(results['kl_loss_%s'%key])+10*np.std(results['kl_loss_%s'%key])>max_kloss): max_kloss = np.mean(results['kl_loss_%s'%key])+10*np.std(results['kl_loss_%s'%key])
 	    	    
-    # Plot the results_
+    # Plot the results
     print("Plotting the results")
     bins_=np.linspace(min_loss,max_loss,100)
     plt.figure(figsize=(10,10))
-    plt.hist(results_['mse_loss_QCD'],label=key,histtype='step',bins=bins_,color='black',linewidth=2,density=True)
-    for key in bsm_labels: plt.hist(results_['mse_loss_%s'%key],label=key,histtype='step',bins=bins_,density=True)
+    plt.hist(results['mse_loss_QCD'],label=key,histtype='step',bins=bins_,color='black',linewidth=2,density=True)
+    for key in bsm_labels: plt.hist(results['mse_loss_%s'%key],label=key,histtype='step',bins=bins_,density=True)
     plt.legend(fontsize='x-small')
     plt.yscale('log')
     plt.xlabel('Loss')
@@ -324,8 +326,8 @@ def evaluate(input_qcd,input_bsm,data_file,outdir,events,model_type,latent_dim,b
 
         bins_=np.linspace(min_tloss,max_tloss,100)
         plt.figure(figsize=(10,10))
-        plt.hist(results_['total_loss_QCD'],label=key,histtype='step',bins=bins_,color='black',linewidth=2,density=True)
-        for key in bsm_labels: plt.hist(results_['total_loss_%s'%key],label=key,histtype='step',bins=bins_,density=True)
+        plt.hist(results['total_loss_QCD'],label=key,histtype='step',bins=bins_,color='black',linewidth=2,density=True)
+        for key in bsm_labels: plt.hist(results['total_loss_%s'%key],label=key,histtype='step',bins=bins_,density=True)
         plt.legend(fontsize='x-small')
         plt.yscale('log')
         plt.xlabel('Total Loss')
@@ -335,8 +337,8 @@ def evaluate(input_qcd,input_bsm,data_file,outdir,events,model_type,latent_dim,b
 
         bins_=np.linspace(min_r,max_r,100)
         plt.figure(figsize=(10,10))
-        plt.hist(results_['radius_QCD'],label=key,histtype='step',bins=bins_,color='black',linewidth=2,density=True)
-        for key in bsm_labels: plt.hist(results_['radius_%s'%key],label=key,histtype='step',bins=bins_,density=True)
+        plt.hist(results['radius_QCD'],label=key,histtype='step',bins=bins_,color='black',linewidth=2,density=True)
+        for key in bsm_labels: plt.hist(results['radius_%s'%key],label=key,histtype='step',bins=bins_,density=True)
         plt.legend(fontsize='x-small')
         plt.yscale('log')
         plt.xlabel('Radius')
@@ -347,7 +349,7 @@ def evaluate(input_qcd,input_bsm,data_file,outdir,events,model_type,latent_dim,b
         for key in bsm_labels:
             plt.figure(figsize=(10,10))
             for i in range(latent_dim):
-                plt.hist(results_['encoded_mean_%s'%key][:,i],bins=100,label='mean '+str(i),histtype='step', density=True,range=[-5,5])
+                plt.hist(results['encoded_mean_%s'%key][:,i],bins=100,label='mean '+str(i),histtype='step', density=True,range=[-5,5])
             plt.legend(fontsize='x-small')
             plt.xlabel('Loss')
             plt.ylabel('z')
@@ -358,7 +360,7 @@ def evaluate(input_qcd,input_bsm,data_file,outdir,events,model_type,latent_dim,b
         for key in bsm_labels:
             plt.figure(figsize=(10,10))
             for i in range(latent_dim):
-                plt.hist(results_['encoded_logvar_%s'%key][:,i],bins=100,label='logvar '+str(i),histtype='step', density=True,range=[-20,20])
+                plt.hist(results['encoded_logvar_%s'%key][:,i],bins=100,label='logvar '+str(i),histtype='step', density=True,range=[-20,20])
             plt.legend(fontsize='x-small')
             plt.xlabel('Loss')
             plt.ylabel('z')
@@ -369,8 +371,8 @@ def evaluate(input_qcd,input_bsm,data_file,outdir,events,model_type,latent_dim,b
     plt.figure(figsize=(10,10))
     for key in bsm_labels:
 
-        true_label = np.concatenate(( np.ones(results_['%s_scaled'%key].shape[0]), np.zeros(results_['predicted_QCD'].shape[0]) ))
-        pred_loss = np.concatenate(( results_['mse_loss_%s'%key], results_['mse_loss_QCD'] ))
+        true_label = np.concatenate(( np.ones(results['%s_scaled'%key].shape[0]), np.zeros(results['predicted_QCD'].shape[0]) ))
+        pred_loss = np.concatenate(( results['mse_loss_%s'%key], results['mse_loss_QCD'] ))
         fpr_loss, tpr_loss, threshold_loss = roc_curve(true_label, pred_loss)
 
         auc_loss = auc(fpr_loss, tpr_loss)
@@ -391,8 +393,8 @@ def evaluate(input_qcd,input_bsm,data_file,outdir,events,model_type,latent_dim,b
         plt.figure(figsize=(10,10))
         for key in bsm_labels:
 
-            true_label = np.concatenate(( np.ones(results_['%s_scaled'%key].shape[0]), np.zeros(results_['predicted_QCD'].shape[0]) ))
-            pred_loss = np.concatenate(( results_['total_loss_%s'%key], results_['total_loss_QCD'] ))
+            true_label = np.concatenate(( np.ones(results['%s_scaled'%key].shape[0]), np.zeros(results['predicted_QCD'].shape[0]) ))
+            pred_loss = np.concatenate(( results['total_loss_%s'%key], results['total_loss_QCD'] ))
             fpr_loss, tpr_loss, threshold_loss = roc_curve(true_label, pred_loss)
 
             auc_loss = auc(fpr_loss, tpr_loss)
@@ -412,8 +414,8 @@ def evaluate(input_qcd,input_bsm,data_file,outdir,events,model_type,latent_dim,b
         plt.figure(figsize=(10,10))
         for key in bsm_labels:
 
-            true_label = np.concatenate(( np.ones(results_['%s_scaled'%key].shape[0]), np.zeros(results_['predicted_QCD'].shape[0]) ))
-            pred_loss = np.concatenate(( results_['radius_%s'%key], results_['radius_QCD'] ))
+            true_label = np.concatenate(( np.ones(results['%s_scaled'%key].shape[0]), np.zeros(results['predicted_QCD'].shape[0]) ))
+            pred_loss = np.concatenate(( results['radius_%s'%key], results['radius_QCD'] ))
             fpr_loss, tpr_loss, threshold_loss = roc_curve(true_label, pred_loss)
 
             auc_loss = auc(fpr_loss, tpr_loss)
@@ -432,8 +434,8 @@ def evaluate(input_qcd,input_bsm,data_file,outdir,events,model_type,latent_dim,b
         plt.figure(figsize=(10,10))
         for key in bsm_labels:
 
-            true_label = np.concatenate(( np.ones(results_['%s_scaled'%key].shape[0]), np.zeros(results_['predicted_QCD'].shape[0]) ))
-            pred_loss = np.concatenate(( results_['kl_loss_%s'%key], results_['kl_loss_QCD'] ))
+            true_label = np.concatenate(( np.ones(results['%s_scaled'%key].shape[0]), np.zeros(results['predicted_QCD'].shape[0]) ))
+            pred_loss = np.concatenate(( results['kl_loss_%s'%key], results['kl_loss_QCD'] ))
             fpr_loss, tpr_loss, threshold_loss = roc_curve(true_label, pred_loss)
 
             auc_loss = auc(fpr_loss, tpr_loss)
