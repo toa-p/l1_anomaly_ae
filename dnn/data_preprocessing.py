@@ -13,7 +13,7 @@ import sys
 
 
 
-def prepare_data(input_file, input_bsm, events, output_file,retun_data):
+def prepare_data(input_file, input_bsm, events, output_file,return_data):
     # read QCD data
     with h5py.File(input_file, 'r') as h5f:
         # remove last feature, which is the type of particle
@@ -34,12 +34,7 @@ def prepare_data(input_file, input_bsm, events, output_file,retun_data):
     # define training, test and validation datasets
     X_train, X_test, Y_train, Y_test = train_test_split(data, data_target, test_size=0.5)
     del data, data_target
-    
-    print(X_test.shape)
-    # print(X_test[:,1:2])
-    #print(Y_test[:,19:20])
-    # sys.exit()
-    
+       
     # read BSM data
     bsm_data = []
     
@@ -66,17 +61,16 @@ def prepare_data(input_file, input_bsm, events, output_file,retun_data):
         bsm_data_target.reshape(bsm_data_target.shape[0], bsm_data_target.shape[1]*bsm_data_target.shape[2])
         bsm_scaled_data.append(bsm_data_target)
     
-    data = [X_train, Y_train, X_test, Y_test, bsm_data, bsm_scaled_data, pt_scaler]
-
-    if(retun_data):
-        print("reutrned data")
-        return X_train, Y_train, X_test, Y_test, bsm_data, bsm_scaled_data, pt_scaler, bsm_labels
+    data = [X_train, Y_train, X_test, Y_test, bsm_data, bsm_scaled_data, pt_scaler, bsm_labels]
 
     if(output_file!=''):
         with open(output_file, 'wb') as handle: 
             pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
             print("Wrote data to a pickle file")
-    
+
+    if(return_data):
+        print("returned data")
+        return X_train, Y_train, X_test, Y_test, bsm_data, bsm_scaled_data, pt_scaler, bsm_labels
 
 	
 if __name__ == '__main__':

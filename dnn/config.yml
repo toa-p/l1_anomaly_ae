@@ -1,0 +1,9 @@
+InputQCD: QCD_preprocessed.h5
+InputBSM: BSM_preprocessed.h5
+DataFile: data.pickle
+OutDir: train-vae
+Events: -1
+ModelType: VAE
+LatentDim: 3
+BatchSize: 1024
+Epochs: 150
