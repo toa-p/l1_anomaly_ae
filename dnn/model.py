@@ -62,7 +62,7 @@ def build_AE(input_shape,latent_dim):
 
     return autoencoder
     
-def build_VAE(input_shape,latent_dim):
+def build_VAE(input_shape, latent_dim):
     
     #encoder
     inputArray = Input(shape=(input_shape))
@@ -84,7 +84,7 @@ def build_VAE(input_shape,latent_dim):
     encoder.summary()
 
     #decoder
-    d_input = Input(shape=(latent_dim,), name='decoder_input')
+    d_input = Input(shape=(int(latent_dim),), name='decoder_input')
     x = Dense(16, kernel_initializer=tf.keras.initializers.HeUniform(seed=42))(d_input)
     x = BatchNormalization()(x)
     x = LeakyReLU(alpha=0.3)(x)
@@ -93,7 +93,7 @@ def build_VAE(input_shape,latent_dim):
     x = LeakyReLU(alpha=0.3)(x)
     dec = Dense(input_shape, kernel_initializer=tf.keras.initializers.HeUniform(seed=42))(x)
 
-    # Create decoder
+    # Create decoder 
     decoder = Model(d_input, dec, name='decoder')
     decoder.summary()
     

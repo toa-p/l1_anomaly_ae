@@ -1,0 +1,66 @@
+Model: "encoder"
+__________________________________________________________________________________________________
+ Layer (type)                   Output Shape         Param #     Connected to                     
+==================================================================================================
+ input_1 (InputLayer)           [(None, 57)]         0           []                               
+                                                                                                  
+ batch_normalization (BatchNorm  (None, 57)          228         ['input_1[0][0]']                
+ alization)                                                                                       
+                                                                                                  
+ dense (Dense)                  (None, 32)           1856        ['batch_normalization[0][0]']    
+                                                                                                  
+ batch_normalization_1 (BatchNo  (None, 32)          128         ['dense[0][0]']                  
+ rmalization)                                                                                     
+                                                                                                  
+ leaky_re_lu (LeakyReLU)        (None, 32)           0           ['batch_normalization_1[0][0]']  
+                                                                                                  
+ dense_1 (Dense)                (None, 16)           528         ['leaky_re_lu[0][0]']            
+                                                                                                  
+ batch_normalization_2 (BatchNo  (None, 16)          64          ['dense_1[0][0]']                
+ rmalization)                                                                                     
+                                                                                                  
+ leaky_re_lu_1 (LeakyReLU)      (None, 16)           0           ['batch_normalization_2[0][0]']  
+                                                                                                  
+ latent_mu (Dense)              (None, 9)            153         ['leaky_re_lu_1[0][0]']          
+                                                                                                  
+ latent_logvar (Dense)          (None, 9)            153         ['leaky_re_lu_1[0][0]']          
+                                                                                                  
+ sampling (Sampling)            (None, 9)            0           ['latent_mu[0][0]',              
+                                                                  'latent_logvar[0][0]']          
+                                                                                                  
+==================================================================================================
+Total params: 3,110
+Trainable params: 2,900
+Non-trainable params: 210
+__________________________________________________________________________________________________
+Model: "decoder"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ decoder_input (InputLayer)  [(None, 9)]               0         
+                                                                 
+ dense_2 (Dense)             (None, 16)                160       
+                                                                 
+ batch_normalization_3 (Batc  (None, 16)               64        
+ hNormalization)                                                 
+                                                                 
+ leaky_re_lu_2 (LeakyReLU)   (None, 16)                0         
+                                                                 
+ dense_3 (Dense)             (None, 32)                544       
+                                                                 
+ batch_normalization_4 (Batc  (None, 32)               128       
+ hNormalization)                                                 
+                                                                 
+ leaky_re_lu_3 (LeakyReLU)   (None, 32)                0         
+                                                                 
+ dense_4 (Dense)             (None, 57)                1881      
+                                                                 
+=================================================================
+Total params: 2,777
+Trainable params: 2,681
+Non-trainable params: 96
+_________________________________________________________________
+Training the model
+Epoch 1/150
+Batch 0: Invalid loss, terminating training
+1954/1954 [==============================] - 87s 41ms/step - loss: inf - reconstruction_loss: 0.5815 - kl_loss: inf - val_loss: nan - val_reconstruction_loss: nan - val_kl_loss: inf - lr: 0.0010

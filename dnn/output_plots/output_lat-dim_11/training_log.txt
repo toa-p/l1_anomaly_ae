@@ -1,0 +1,103 @@
+Model: "encoder"
+__________________________________________________________________________________________________
+ Layer (type)                   Output Shape         Param #     Connected to                     
+==================================================================================================
+ input_1 (InputLayer)           [(None, 57)]         0           []                               
+                                                                                                  
+ batch_normalization (BatchNorm  (None, 57)          228         ['input_1[0][0]']                
+ alization)                                                                                       
+                                                                                                  
+ dense (Dense)                  (None, 32)           1856        ['batch_normalization[0][0]']    
+                                                                                                  
+ batch_normalization_1 (BatchNo  (None, 32)          128         ['dense[0][0]']                  
+ rmalization)                                                                                     
+                                                                                                  
+ leaky_re_lu (LeakyReLU)        (None, 32)           0           ['batch_normalization_1[0][0]']  
+                                                                                                  
+ dense_1 (Dense)                (None, 16)           528         ['leaky_re_lu[0][0]']            
+                                                                                                  
+ batch_normalization_2 (BatchNo  (None, 16)          64          ['dense_1[0][0]']                
+ rmalization)                                                                                     
+                                                                                                  
+ leaky_re_lu_1 (LeakyReLU)      (None, 16)           0           ['batch_normalization_2[0][0]']  
+                                                                                                  
+ latent_mu (Dense)              (None, 11)           187         ['leaky_re_lu_1[0][0]']          
+                                                                                                  
+ latent_logvar (Dense)          (None, 11)           187         ['leaky_re_lu_1[0][0]']          
+                                                                                                  
+ sampling (Sampling)            (None, 11)           0           ['latent_mu[0][0]',              
+                                                                  'latent_logvar[0][0]']          
+                                                                                                  
+==================================================================================================
+Total params: 3,178
+Trainable params: 2,968
+Non-trainable params: 210
+__________________________________________________________________________________________________
+Model: "decoder"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ decoder_input (InputLayer)  [(None, 11)]              0         
+                                                                 
+ dense_2 (Dense)             (None, 16)                192       
+                                                                 
+ batch_normalization_3 (Batc  (None, 16)               64        
+ hNormalization)                                                 
+                                                                 
+ leaky_re_lu_2 (LeakyReLU)   (None, 16)                0         
+                                                                 
+ dense_3 (Dense)             (None, 32)                544       
+                                                                 
+ batch_normalization_4 (Batc  (None, 32)               128       
+ hNormalization)                                                 
+                                                                 
+ leaky_re_lu_3 (LeakyReLU)   (None, 32)                0         
+                                                                 
+ dense_4 (Dense)             (None, 57)                1881      
+                                                                 
+=================================================================
+Total params: 2,809
+Trainable params: 2,713
+Non-trainable params: 96
+_________________________________________________________________
+Training the model
+Epoch 1/150
+1954/1954 [==============================] - 434s 221ms/step - loss: 0.4533 - reconstruction_loss: 0.3007 - kl_loss: 0.0359 - val_loss: 0.2858 - val_reconstruction_loss: 0.2837 - val_kl_loss: 0.0021 - lr: 0.0010
+Epoch 2/150
+1954/1954 [==============================] - 453s 232ms/step - loss: 0.2862 - reconstruction_loss: 0.2850 - kl_loss: 0.0014 - val_loss: 0.2826 - val_reconstruction_loss: 0.2816 - val_kl_loss: 0.0010 - lr: 0.0010
+Epoch 3/150
+1954/1954 [==============================] - 456s 234ms/step - loss: 0.2852 - reconstruction_loss: 0.2838 - kl_loss: 0.0011 - val_loss: 0.2820 - val_reconstruction_loss: 0.2809 - val_kl_loss: 0.0010 - lr: 0.0010
+Epoch 4/150
+1954/1954 [==============================] - 457s 234ms/step - loss: 0.2838 - reconstruction_loss: 0.2830 - kl_loss: 0.0011 - val_loss: 0.2816 - val_reconstruction_loss: 0.2805 - val_kl_loss: 0.0011 - lr: 0.0010
+Epoch 5/150
+1954/1954 [==============================] - 446s 228ms/step - loss: 0.2840 - reconstruction_loss: 0.2825 - kl_loss: 0.0010 - val_loss: 0.2817 - val_reconstruction_loss: 0.2807 - val_kl_loss: 9.9387e-04 - lr: 0.0010
+Epoch 6/150
+1954/1954 [==============================] - 453s 232ms/step - loss: 0.2833 - reconstruction_loss: 0.2824 - kl_loss: 9.6459e-04 - val_loss: 0.2815 - val_reconstruction_loss: 0.2805 - val_kl_loss: 9.6814e-04 - lr: 0.0010
+Epoch 7/150
+1954/1954 [==============================] - 454s 232ms/step - loss: 0.2841 - reconstruction_loss: 0.2824 - kl_loss: 8.9820e-04 - val_loss: 0.2836 - val_reconstruction_loss: 0.2823 - val_kl_loss: 0.0013 - lr: 0.0010
+Epoch 8/150
+1953/1954 [============================>.] - ETA: 0s - loss: 0.2841 - reconstruction_loss: 0.2822 - kl_loss: 8.7022e-04
+Epoch 00008: ReduceLROnPlateau reducing learning rate to 0.00010000000474974513.
+1954/1954 [==============================] - 454s 232ms/step - loss: 0.2841 - reconstruction_loss: 0.2822 - kl_loss: 8.7029e-04 - val_loss: 0.2854 - val_reconstruction_loss: 0.2840 - val_kl_loss: 0.0014 - lr: 0.0010
+Epoch 9/150
+1954/1954 [==============================] - 451s 231ms/step - loss: 0.2828 - reconstruction_loss: 0.2818 - kl_loss: 9.0386e-04 - val_loss: 0.2840 - val_reconstruction_loss: 0.2827 - val_kl_loss: 0.0012 - lr: 1.0000e-04
+Epoch 10/150
+1954/1954 [==============================] - 450s 231ms/step - loss: 0.2834 - reconstruction_loss: 0.2819 - kl_loss: 8.3854e-04 - val_loss: 0.2834 - val_reconstruction_loss: 0.2822 - val_kl_loss: 0.0011 - lr: 1.0000e-04
+Epoch 11/150
+1954/1954 [==============================] - ETA: 0s - loss: 0.2838 - reconstruction_loss: 0.2819 - kl_loss: 8.4482e-04
+Epoch 00011: ReduceLROnPlateau reducing learning rate to 1.0000000474974514e-05.
+1954/1954 [==============================] - 453s 232ms/step - loss: 0.2838 - reconstruction_loss: 0.2819 - kl_loss: 8.4482e-04 - val_loss: 0.2829 - val_reconstruction_loss: 0.2819 - val_kl_loss: 0.0010 - lr: 1.0000e-04
+Epoch 12/150
+1954/1954 [==============================] - 455s 233ms/step - loss: 0.2835 - reconstruction_loss: 0.2818 - kl_loss: 8.4339e-04 - val_loss: 0.2835 - val_reconstruction_loss: 0.2823 - val_kl_loss: 0.0011 - lr: 1.0000e-05
+Epoch 13/150
+1954/1954 [==============================] - 446s 228ms/step - loss: 0.2822 - reconstruction_loss: 0.2818 - kl_loss: 8.2253e-04 - val_loss: 0.2831 - val_reconstruction_loss: 0.2821 - val_kl_loss: 0.0011 - lr: 1.0000e-05
+Epoch 14/150
+1954/1954 [==============================] - ETA: 0s - loss: 0.2847 - reconstruction_loss: 0.2818 - kl_loss: 8.4222e-04
+Epoch 00014: ReduceLROnPlateau reducing learning rate to 1.0000000656873453e-06.
+1954/1954 [==============================] - 452s 231ms/step - loss: 0.2847 - reconstruction_loss: 0.2818 - kl_loss: 8.4222e-04 - val_loss: 0.2863 - val_reconstruction_loss: 0.2849 - val_kl_loss: 0.0014 - lr: 1.0000e-05
+Epoch 15/150
+1954/1954 [==============================] - 442s 226ms/step - loss: 0.2827 - reconstruction_loss: 0.2818 - kl_loss: 8.3213e-04 - val_loss: 0.2827 - val_reconstruction_loss: 0.2817 - val_kl_loss: 9.8594e-04 - lr: 1.0000e-06
+Epoch 16/150
+1953/1954 [============================>.] - ETA: 0s - loss: 0.2842 - reconstruction_loss: 0.2818 - kl_loss: 8.4177e-04Restoring model weights from the end of the best epoch: 6.
+1954/1954 [==============================] - 454s 232ms/step - loss: 0.2842 - reconstruction_loss: 0.2818 - kl_loss: 8.4173e-04 - val_loss: 0.2843 - val_reconstruction_loss: 0.2831 - val_kl_loss: 0.0012 - lr: 1.0000e-06
+Epoch 00016: early stopping
