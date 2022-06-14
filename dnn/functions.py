@@ -10,7 +10,7 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 import pickle
 import h5py
 from sklearn.model_selection import train_test_split
-tf.keras.mixed_precision.set_global_policy('mixed_float16')
+#tf.keras.mixed_precision.set_global_policy('mixed_float16')
 
 #tf.compat.v1.enable_eager_execution()
 

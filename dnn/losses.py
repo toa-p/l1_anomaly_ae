@@ -1,7 +1,7 @@
 import tensorflow as tf
 import math
 import numpy as np
-tf.keras.mixed_precision.set_global_policy('mixed_float16')
+#tf.keras.mixed_precision.set_global_policy('mixed_float16')
 
 def mse_loss(inputs, outputs):
     return np.mean((inputs-outputs)*(inputs-outputs), axis=-1)

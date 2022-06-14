@@ -4,7 +4,7 @@ import os
 import tensorflow as tf
 from tensorflow.keras.models import Model
 import tensorflow.keras as keras
-tf.keras.mixed_precision.set_global_policy('mixed_float16')
+#tf.keras.mixed_precision.set_global_policy('mixed_float16')
 
 class VAE(Model):
     def __init__(self, encoder, decoder, **kwargs):
